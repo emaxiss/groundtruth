@@ -7,9 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "grounding": "node scripts/print-grounding.ts",
-    "verify:contract": "node scripts/verify-contract.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.2.10",
