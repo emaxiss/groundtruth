@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: app (lint, typecheck, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  contract:
+    name: contract (fake-LLM determinism)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # No API key, no model: fake mode makes the API contract testable in CI.
+      - name: Verify grounding block is within budget
+        run: node scripts/print-grounding.ts > /dev/null
+
+      - name: Verify API contract and determinism
+        env:
+          GROUNDTRUTH_FAKE_LLM: '1'
+        run: |
+          npm start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 1
+          done
+          node scripts/verify-contract.mjs
