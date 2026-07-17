@@ -10,17 +10,18 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 
 ## Status
 
-| Component | State |
-|---|---|
-| Docs corpus + grounding block | Working |
-| Provider-agnostic LLM client | Working |
-| Chat endpoint and UI | Working |
-| Deterministic fake-LLM mode | Working |
-| CI: lint, typecheck, build, contract | Working |
-| Ticket triage (structured output) | Planned |
-| Golden dataset (30 cases) | Planned |
-| DeepEval harness | Planned |
-| Playwright E2E suite | Planned |
+| Component                                          | State   |
+| -------------------------------------------------- | ------- |
+| Docs corpus + grounding block                      | Working |
+| Provider-agnostic LLM client                       | Working |
+| Chat endpoint and UI                               | Working |
+| Deterministic fake-LLM mode                        | Working |
+| Unit tests (Vitest)                                | Working |
+| CI: format, lint, typecheck, test, build, contract | Working |
+| Ticket triage (structured output)                  | Planned |
+| Golden dataset (30 cases)                          | Planned |
+| DeepEval harness                                   | Planned |
+| Playwright E2E suite                               | Planned |
 
 The agent runs today. The eval harness is the point of the project and is not built yet; this README describes the parts that exist, and the design intent for the parts that do not.
 
@@ -116,7 +117,7 @@ The harness is not built yet. The design it will implement:
 
 ```
 app/           Next.js App Router: UI and API routes
-lib/           LLM client, prompts, zod schemas, corpus loader
+lib/           LLM client, prompts, zod schemas, corpus loader, unit tests
 docs-corpus/   Twelve markdown files; the future RAG corpus
 scripts/       Grounding budget check, black-box contract verifier
 evals/         Python eval harness (planned)
