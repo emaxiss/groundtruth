@@ -12,8 +12,10 @@ const INJECTION_PATTERNS = [
   /override (the |your )?(policy|rules|refund)/i,
 ];
 
+// Word-bounded: short terms like `api`, `sso`, and `sla` otherwise match inside
+// unrelated words ("capital" contains "api", "assist" contains "sso").
 const TASKLOOP_TERMS =
-  /taskloop|board|task|subtask|plan|pricing|pro plan|team plan|free plan|refund|invoice|billing|charge|seat|webhook|api|token|rate limit|integration|slack|github|drive|export|sso|saml|uptime|sla|workspace|attachment|storage|label|assignee/i;
+  /\b(taskloop|boards?|tasks?|subtasks?|plans?|pricing|refunds?|invoices?|billing|charges?|seats?|webhooks?|api|tokens?|rate limit|integrations?|slack|github|drive|exports?|sso|saml|uptime|sla|workspaces?|attachments?|storage|labels?|assignees?)\b/i;
 
 export function classifyIntent(user: string, jsonMode?: boolean): FakeIntent {
   if (INJECTION_PATTERNS.some((p) => p.test(user))) return 'injection';
