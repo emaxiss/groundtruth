@@ -2,27 +2,32 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { ApiErrorResponse, ChatResponse, HealthResponse } from '@/lib/schemas';
+
 type Msg = { role: 'user' | 'agent'; text: string };
-type Health = { fake_llm: boolean; model: string | null; corpus_docs: number };
 
 const MAX_CHARS = 2000;
 
 export function Page() {
   const [tab, setTab] = useState<'chat' | 'triage'>('chat');
-  const [health, setHealth] = useState<Health | null>(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setHealth)
-      .catch(() => setHealth(null));
+    const load = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) return setHealth(null);
+        const parsed = HealthResponse.safeParse(await res.json());
+        setHealth(parsed.success ? parsed.data : null);
+      } catch {
+        setHealth(null);
+      }
+    };
+    void load();
   }, []);
 
   return (
-    <main
-      className="mx-auto flex h-dvh w-full max-w-3xl flex-col px-5 py-8"
-      data-testid="app-root"
-    >
+    <main className="mx-auto flex h-dvh w-full max-w-3xl flex-col px-5 py-8" data-testid="app-root">
       <header className="mb-6 shrink-0 border-b border-line pb-5">
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="text-sm tracking-[0.2em] text-signal uppercase">groundtruth</h1>
@@ -116,12 +121,18 @@ function ChatPanel() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ message }),
       });
-      const data = await res.json();
+      const body: unknown = await res.json();
       if (!res.ok) {
-        setError(data?.error ?? `Request failed (${res.status})`);
+        const err = ApiErrorResponse.safeParse(body);
+        setError(err.success ? err.data.error : `Request failed (${res.status})`);
         return;
       }
-      setMsgs((m) => [...m, { role: 'agent', text: data.answer }]);
+      const parsed = ChatResponse.safeParse(body);
+      if (!parsed.success) {
+        setError('The server returned an unexpected response.');
+        return;
+      }
+      setMsgs((m) => [...m, { role: 'agent', text: parsed.data.answer }]);
     } catch {
       setError('Could not reach the API. Is the dev server running?');
     } finally {
@@ -192,7 +203,13 @@ function ChatPanel() {
         </div>
       )}
 
-      <form onSubmit={send} className="mt-4 shrink-0 border-t border-line pt-4" noValidate>
+      <form
+        onSubmit={(e) => {
+          void send(e);
+        }}
+        className="mt-4 shrink-0 border-t border-line pt-4"
+        noValidate
+      >
         <label htmlFor="chat-input" className="sr-only">
           Message
         </label>
@@ -203,7 +220,7 @@ function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send(e);
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void send(e);
           }}
           aria-invalid={Boolean(invalid) || tooLong}
           aria-describedby={invalid ? 'chat-input-error' : undefined}

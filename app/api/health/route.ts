@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { isFakeMode } from '@/lib/llm';
-import { groundingStats } from '@/lib/corpus';
 
-export async function GET() {
+import { groundingStats } from '@/lib/corpus';
+import { isFakeMode } from '@/lib/llm';
+
+export function GET() {
   const stats = groundingStats();
   return NextResponse.json({
     status: 'ok',
