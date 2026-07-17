@@ -13,7 +13,11 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "grounding": "node scripts/print-grounding.ts",
-    "verify:contract": "node scripts/verify-contract.mjs"
+    "verify:contract": "node scripts/verify-contract.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "next": "16.2.10",
@@ -35,7 +39,12 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
+    "prettier": "^3.9.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "typescript-eslint": "^8.64.0",
+    "vitest": "^4.1.10"
   }
 }
