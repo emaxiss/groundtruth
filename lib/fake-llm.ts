@@ -18,11 +18,6 @@ const TASKLOOP_TERMS =
 export function classifyIntent(user: string, jsonMode?: boolean): FakeIntent {
   if (INJECTION_PATTERNS.some((p) => p.test(user))) return 'injection';
   if (jsonMode) return 'triage';
-  // A docs fixture hit means the question is definitionally in scope, so the
-  // probe wins over the keyword check ("What does Pro cost?" has no bare
-  // TaskLoop term, and loosening the keyword list to `pro` would match
-  // "problem"/"process").
-  if (DOCS_FIXTURES.some((f) => f.probe.test(user))) return 'docs_question';
   if (!TASKLOOP_TERMS.test(user)) return 'out_of_scope';
   return 'docs_question';
 }
