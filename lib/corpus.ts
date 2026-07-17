@@ -49,7 +49,7 @@ const PINNED: Record<string, string[]> = {
     'Export is available on all plans, JSON or CSV, async, download link expires after 7 days. 3 exports per 24 hours.',
     'Audit log export is Team only. No importer for Jira/Trello/Asana. Import capped at 10,000 tasks per run.',
   ],
-  'integrations': [
+  integrations: [
     'Official integrations: Slack, GitHub, Google Drive. Pro and Team get all three; Free gets Slack only with 1 channel.',
     'No Jira, Asana, Trello, or Zapier support. No marketplace. GitHub Enterprise Server is Team only.',
   ],

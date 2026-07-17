@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { complete, LlmError } from '@/lib/llm';
 import { chatSystemPrompt, AI_DISCLAIMER } from '@/lib/prompts';
 import { ChatInput, type ApiError } from '@/lib/schemas';
@@ -40,7 +41,10 @@ export async function POST(req: Request) {
     });
     // Disclaimer is appended here, not requested from the model, so it is
     // present on every answer regardless of what the model returns.
-    return NextResponse.json({ answer: `${answer}\n\n${AI_DISCLAIMER}`, disclaimer: AI_DISCLAIMER });
+    return NextResponse.json({
+      answer: `${answer}\n\n${AI_DISCLAIMER}`,
+      disclaimer: AI_DISCLAIMER,
+    });
   } catch (err) {
     if (err instanceof LlmError) {
       return NextResponse.json<ApiError>(
