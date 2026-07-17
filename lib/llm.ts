@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+
 import { fakeComplete } from './fake-llm';
 
 const TIMEOUT_MS = 60_000;

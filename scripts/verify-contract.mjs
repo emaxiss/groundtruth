@@ -57,7 +57,11 @@ check('over-limit message is rejected', long.status === 400, `got ${long.status}
 
 const runs = await Promise.all(Array.from({ length: 5 }, () => chat('What does Pro cost?')));
 const unique = new Set(runs.map((r) => JSON.stringify(r.body)));
-check('fake mode is byte-identical across runs', unique.size === 1, `${unique.size} distinct responses`);
+check(
+  'fake mode is byte-identical across runs',
+  unique.size === 1,
+  `${unique.size} distinct responses`
+);
 
 console.log(`\n${failures === 0 ? 'contract: OK' : `contract: ${failures} FAILURE(S)`}`);
 process.exit(failures === 0 ? 0 : 1);
