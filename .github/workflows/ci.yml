@@ -17,21 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: pnpm lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: pnpm typecheck
 
       - name: Build
-        run: npm run build
+        run: pnpm build
 
   contract:
     name: contract (fake-LLM determinism)
@@ -39,25 +41,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
       # No API key, no model: fake mode makes the API contract testable in CI.
       - name: Verify grounding block is within budget
-        run: node scripts/print-grounding.ts > /dev/null
+        run: pnpm grounding > /dev/null
 
       - name: Verify API contract and determinism
         env:
           GROUNDTRUTH_FAKE_LLM: '1'
         run: |
-          npm start &
+          pnpm start &
           for i in $(seq 1 30); do
             curl -sf http://localhost:3000/api/health > /dev/null && break
             sleep 1
           done
-          npm run verify:contract
+          pnpm verify:contract
