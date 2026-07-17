@@ -19,7 +19,7 @@
 
 ---
 
-- [ ] `npm run lint`, `npm run typecheck`, and `npm run build` pass
-- [ ] `npm run verify:contract` passes against the app in fake-LLM mode
+- [ ] `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass
+- [ ] `pnpm verify:contract` passes against the app in fake-LLM mode
 - [ ] Behaviour changes are covered by a check that would fail without them
 - [ ] Docs updated if the contract, environment, or setup changed

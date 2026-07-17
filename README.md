@@ -57,12 +57,12 @@ The harness talks to the app over HTTP and knows nothing about its internals. Th
 
 ## Quickstart
 
-Requires Node 22+.
+Requires Node 22+ and pnpm 10+.
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env.local   # add an API key, or use fake mode below
-npm run dev                  # http://localhost:3000
+pnpm dev                     # http://localhost:3000
 ```
 
 The default provider is OpenRouter over its OpenAI-compatible endpoint. Any provider works; swapping is an environment change, not a code change:
@@ -83,9 +83,9 @@ GROUNDTRUTH_API_KEY=ollama
 `GROUNDTRUTH_FAKE_LLM=1` makes `lib/llm.ts` return canned responses from a fixture map keyed by intent. The API and UI behave identically; responses are byte-identical across runs. This exists so the E2E and contract layers can assert on exact output without a live model, and it is what CI runs:
 
 ```bash
-npm run build
-GROUNDTRUTH_FAKE_LLM=1 npm start &
-npm run verify:contract
+pnpm build
+GROUNDTRUTH_FAKE_LLM=1 pnpm start &
+pnpm verify:contract
 ```
 
 ## Eval design
