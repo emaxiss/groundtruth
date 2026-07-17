@@ -60,4 +60,4 @@ jobs:
             curl -sf http://localhost:3000/api/health > /dev/null && break
             sleep 1
           done
-          node scripts/verify-contract.mjs
+          npm run verify:contract
