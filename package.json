@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "grounding": "node scripts/print-grounding.ts"
   },
   "dependencies": {
     "next": "16.2.10",
