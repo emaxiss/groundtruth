@@ -262,7 +262,7 @@ function TriagePlaceholder() {
       className="border border-dashed border-line px-4 py-8 text-center text-xs text-faint"
       data-testid="triage-placeholder"
     >
-      Ticket triage lands in the next phase.
+      Ticket triage is not available yet.
     </section>
   );
 }
