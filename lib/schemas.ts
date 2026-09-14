@@ -9,6 +9,36 @@ export const ChatInput = z.object({
 });
 export type ChatInput = z.infer<typeof ChatInput>;
 
+export const CUSTOMER_PLANS = ['free', 'pro', 'team'] as const;
+
+export const TriageInput = z.object({
+  subject: z
+    .string()
+    .trim()
+    .min(1, 'Subject cannot be empty')
+    .max(200, 'Subject must be 200 characters or fewer'),
+  body: z
+    .string()
+    .trim()
+    .min(1, 'Body cannot be empty')
+    .max(2000, 'Body must be 2000 characters or fewer'),
+  customer_plan: z.enum(CUSTOMER_PLANS),
+});
+export type TriageInput = z.infer<typeof TriageInput>;
+
+// Mirrors the classification contract in lib/prompts.ts. The model is told to
+// produce this shape; this is what decides whether it actually did. Anything
+// outside these unions is a schema failure, not a low-confidence answer.
+export const TriageOutput = z.object({
+  category: z.enum(['billing', 'bug', 'how_to', 'feature_request', 'account', 'abuse']),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  route_to: z.enum(['support_l1', 'support_l2', 'engineering', 'billing_team', 'trust_safety']),
+  refund_eligible: z.union([z.boolean(), z.literal('needs_review')]),
+  suggested_reply: z.string().trim().min(1),
+  confidence: z.number().min(0).max(1),
+});
+export type TriageOutput = z.infer<typeof TriageOutput>;
+
 export type ApiError = {
   error: string;
   kind: 'validation' | 'rate_limited' | 'timeout' | 'upstream' | 'config' | 'schema';
