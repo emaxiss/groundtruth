@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Validate eval dataset
+        run: pnpm evals:validate
+
   contract:
     name: contract (fake-LLM determinism)
     runs-on: ubuntu-latest
