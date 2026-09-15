@@ -18,7 +18,7 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 | Deterministic fake-LLM mode                        | Working |
 | Unit tests (Vitest)                                | Working |
 | CI: format, lint, typecheck, test, build, contract | Working |
-| Ticket triage (structured output)                  | Planned |
+| Ticket triage (structured output)                  | Working |
 | Golden dataset (30 cases)                          | Planned |
 | DeepEval harness                                   | Planned |
 | Playwright E2E suite                               | Planned |

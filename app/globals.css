@@ -89,3 +89,12 @@ body {
   background: var(--gt-signal-dim);
   color: var(--gt-text);
 }
+
+.gt-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gt-faint);
+}
