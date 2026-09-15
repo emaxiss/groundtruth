@@ -43,3 +43,12 @@ Design choices and their reasoning. One line each.
 - `devIndicators: false` in `next.config.ts`; the Next dev overlay floats over the composer and would intercept browser-automation clicks.
 - `allowImportingTsExtensions` is enabled so `scripts/print-grounding.ts` can run under Node's native type stripping; it is a no-op for the app because `noEmit` was already set.
 - The layout uses `h-dvh` with `min-h-0` on the flex column so the message list scrolls internally and the composer stays anchored; without `min-h-0` the list grew unbounded and pushed the send button off screen.
+
+## Evals
+
+- The harness is Python and talks to the app only over HTTP, so it exercises the deployed contract and cannot reach into route internals; it would catch a regression anywhere between the handler and the model.
+- Deterministic assertions (regex, schema, enum fields) are hard failures with no threshold; judge-scored metrics sit behind a `judge` pytest marker so `pytest -m "not judge"` is a fully deterministic CI gate.
+- Every dataset case expects HTTP 200; error-path behaviour belongs to the route tests, and a case that cannot get a 200 in fake mode is a fixture gap, not an eval result.
+- A 429 from the app raises a distinct `RateLimited` outcome instead of a failed assertion, because a throttled request scored as a wrong answer would misreport the agent.
+- The fake model's triage fixtures are ordered most-specific first (refund eligibility and account issues before the general billing probe), so the fake satisfies the dataset's boundary cases without a lookup table keyed on the dataset itself.
+- `httpx` and `pytest` are the only harness dependencies until the judge tier lands; versions are pinned in `evals/requirements.txt`.
