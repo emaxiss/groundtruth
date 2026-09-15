@@ -10,18 +10,18 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 
 ## Status
 
-| Component                                          | State   |
-| -------------------------------------------------- | ------- |
-| Docs corpus + grounding block                      | Working |
-| Provider-agnostic LLM client                       | Working |
-| Chat endpoint and UI                               | Working |
-| Deterministic fake-LLM mode                        | Working |
-| Unit tests (Vitest)                                | Working |
-| CI: format, lint, typecheck, test, build, contract | Working |
-| Ticket triage (structured output)                  | Working |
-| Golden dataset (30 cases)                          | Planned |
-| DeepEval harness                                   | Planned |
-| Playwright E2E suite                               | Planned |
+| Component                                                   | State   |
+| ----------------------------------------------------------- | ------- |
+| Docs corpus + grounding block                               | Working |
+| Provider-agnostic LLM client                                | Working |
+| Chat endpoint and UI                                        | Working |
+| Deterministic fake-LLM mode                                 | Working |
+| Unit tests (Vitest)                                         | Working |
+| CI: format, lint, typecheck, test, build, dataset, contract | Working |
+| Ticket triage (structured output)                           | Working |
+| Golden dataset (30 cases)                                   | Working |
+| DeepEval harness                                            | Planned |
+| Playwright E2E suite                                        | Planned |
 
 The agent runs today. The eval harness is the point of the project and is not built yet; this README describes the parts that exist, and the design intent for the parts that do not.
 
@@ -93,7 +93,7 @@ pnpm verify:contract
 
 The design the harness will implement:
 
-**Dataset taxonomy.** Thirty golden cases across five categories, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), and `edge` (boundary cases — a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
+**Dataset taxonomy.** Thirty golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), and `edge` (boundary cases — a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
 
 **Deterministic before judged.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and incapable of flaking. These are hard failures. Judge-based metrics (answer relevancy, correctness against a reference) sit behind a `judge` pytest marker, so `pytest -m "not judge"` is a fully deterministic gate suitable for CI, and the judged suite is a separate, noisier signal.
 
@@ -120,7 +120,7 @@ app/           Next.js App Router: UI and API routes
 lib/           LLM client, prompts, zod schemas, corpus loader, unit tests
 docs-corpus/   Twelve markdown files; the future RAG corpus
 scripts/       Grounding budget check, black-box contract verifier
-evals/         Python eval harness (planned)
+evals/         Golden dataset, validation script, Python eval harness (planned)
 e2e/           Playwright suite (planned)
 DECISIONS.md   Design decisions and their reasoning, one line each
 ```
