@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "grounding": "node scripts/print-grounding.ts",
     "verify:contract": "node scripts/verify-contract.mjs",
+    "evals:validate": "python3 evals/validate_dataset.py",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
