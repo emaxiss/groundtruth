@@ -10,20 +10,20 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 
 ## Status
 
-| Component                                                   | State   |
-| ----------------------------------------------------------- | ------- |
-| Docs corpus + grounding block                               | Working |
-| Provider-agnostic LLM client                                | Working |
-| Chat endpoint and UI                                        | Working |
-| Deterministic fake-LLM mode                                 | Working |
-| Unit tests (Vitest)                                         | Working |
-| CI: format, lint, typecheck, test, build, dataset, contract | Working |
-| Ticket triage (structured output)                           | Working |
-| Golden dataset (30 cases)                                   | Working |
-| DeepEval harness                                            | Planned |
-| Playwright E2E suite                                        | Planned |
+| Component                                                          | State   |
+| ------------------------------------------------------------------ | ------- |
+| Docs corpus + grounding block                                      | Working |
+| Provider-agnostic LLM client                                       | Working |
+| Chat endpoint and UI                                               | Working |
+| Deterministic fake-LLM mode                                        | Working |
+| Unit tests (Vitest)                                                | Working |
+| CI: format, lint, typecheck, test, build, dataset, contract, evals | Working |
+| Ticket triage (structured output)                                  | Working |
+| Golden dataset (30 cases)                                          | Working |
+| DeepEval harness                                                   | Planned |
+| Playwright E2E suite                                               | Planned |
 
-The agent runs today. The eval harness is the point of the project and is not built yet; this README describes the parts that exist, and the design intent for the parts that do not.
+The agent runs today and the deterministic tier of the harness gates every pull request. The judge tier and run-over-run tracking are described below and not built yet.
 
 ## Architecture
 
@@ -101,13 +101,13 @@ The design the harness will implement:
 
 **Regression tracking.** Each run writes a timestamped JSON of per-case scores and per-category pass rates, and prints the delta against the previous run. A single pass rate tells you nothing; the delta tells you whether the last prompt edit cost you anything.
 
-**Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed.
+**Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed. Provider rate limiting is raised as its own outcome rather than scored as a failed case, so a throttled run cannot masquerade as a regression.
 
 **Where RAG slots in.** The grounding block is currently a curated set of facts compiled from `docs-corpus/`, not retrieval. When retrieval replaces it, the retrieved chunks become the `retrieval_context` DeepEval already expects, and faithfulness and contextual-recall metrics attach to the existing cases without the dataset changing.
 
 ## Limitations
 
-- **The eval harness is planned, not built.** The agent is real and tested; the thing this repo is named after is still ahead of it.
+- **Only the deterministic tier exists.** It proves the contract holds; it does not score answer quality. The judge tier and regression tracking are still ahead.
 - **The real-model path is under-verified.** Development has run against fake mode. The prompts are written but have not been hardened against a live model, which is exactly where guardrail prompts tend to fail. The model ID in `.env.example` is a placeholder until it is confirmed against OpenRouter's live model list.
 - **Free-tier providers are rate limited.** A full dataset run with judge metrics makes real contact with that ceiling. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, but a run can still be throttled.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
@@ -120,7 +120,7 @@ app/           Next.js App Router: UI and API routes
 lib/           LLM client, prompts, zod schemas, corpus loader, unit tests
 docs-corpus/   Twelve markdown files; the future RAG corpus
 scripts/       Grounding budget check, black-box contract verifier
-evals/         Golden dataset, validation script, Python eval harness (planned)
+evals/         Golden dataset, validation script, pytest harness (deterministic tier)
 e2e/           Playwright suite (planned)
 DECISIONS.md   Design decisions and their reasoning, one line each
 ```

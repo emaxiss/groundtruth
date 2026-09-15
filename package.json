@@ -15,6 +15,7 @@
     "grounding": "node scripts/print-grounding.ts",
     "verify:contract": "node scripts/verify-contract.mjs",
     "evals:validate": "python3 evals/validate_dataset.py",
+    "evals:deterministic": "python3 -m pytest evals -m \"not judge\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",

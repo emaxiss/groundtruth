@@ -98,6 +98,10 @@ const TRIAGE_DEFAULT = {
   confidence: 0.5,
 };
 
+// Ordered: the first probe to match wins. Refund eligibility comes before the
+// general billing fixture so an in-window or duplicate charge is not swallowed
+// by the out-of-window default, and account issues come before billing so a
+// login problem that mentions billing settings is not misrouted.
 const TRIAGE_FIXTURES: Array<{ probe: RegExp; result: Record<string, unknown> }> = [
   {
     probe: /crash|data loss|lost (all )?(my )?(data|tasks)|outage|cannot access|500 error/i,
@@ -109,6 +113,46 @@ const TRIAGE_FIXTURES: Array<{ probe: RegExp; result: Record<string, unknown> }>
       suggested_reply:
         'Thanks for the report, and sorry for the disruption. We have routed this to our engineering team for investigation and will update you as soon as we know more.',
       confidence: 0.8,
+    },
+  },
+  {
+    // Duplicate or erroneous charges are refundable regardless of window.
+    probe: /duplicate|charged twice|two identical charges|billing error/i,
+    result: {
+      category: 'billing',
+      severity: 'medium',
+      route_to: 'billing_team',
+      refund_eligible: true,
+      suggested_reply:
+        'Thanks for flagging this. Duplicate charges are refunded in full once our billing team verifies them, which typically takes up to 5 business days.',
+      confidence: 0.8,
+    },
+  },
+  {
+    // Inside the inclusive windows: up to 14 days for annual, up to 48 hours
+    // for monthly. Day 15 and hour 49 fall through to the default below.
+    probe:
+      /\b(?:[1-9]|1[0-4]) days ago|\b(?:[1-9]|[1-3][0-9]|4[0-8]) hours ago|within (?:the )?(?:14 days|48 hours)/i,
+    result: {
+      category: 'billing',
+      severity: 'medium',
+      route_to: 'billing_team',
+      refund_eligible: true,
+      suggested_reply:
+        'Thanks for reaching out. Your request falls inside the refund window, so our billing team will process it and the refund should reach your original payment method within 5 to 10 business days.',
+      confidence: 0.8,
+    },
+  },
+  {
+    probe: /\bsso\b|\bsaml\b|password|log ?in|locked out|two-factor|\b2fa\b|ownership/i,
+    result: {
+      category: 'account',
+      severity: 'medium',
+      route_to: 'support_l2',
+      refund_eligible: false,
+      suggested_reply:
+        'Thanks for the details. An account specialist will review your workspace configuration and follow up with the steps to restore access.',
+      confidence: 0.7,
     },
   },
   {
