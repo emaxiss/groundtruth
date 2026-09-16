@@ -54,6 +54,18 @@ Two invariants apply to every case and are not repeated per line: chat answers m
 
 `must_match`, `must_not_match`, `schema`, and the triage field assertions are necessary conditions checked with a regex or a parser. They cannot flake and they run in CI against the fake model. They are deliberately conservative: they prove the answer mentions the right number or refuses the right thing, not that it is a good answer. Answer quality is what the `reference` field and the judge tier are for.
 
+## Running the deterministic tier
+
+Start the app (fake mode needs no key), then run pytest against it:
+
+```bash
+GROUNDTRUTH_FAKE_LLM=1 pnpm dev            # or pnpm build && pnpm start
+pip install -r evals/requirements.txt      # or: uv venv evals/.venv && uv pip install -r evals/requirements.txt
+pnpm evals:deterministic                   # pytest evals -m "not judge"
+```
+
+`GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up. A 429 from the app is raised as `RateLimited`, a distinct outcome from a failed assertion.
+
 ## Validation
 
 ```bash

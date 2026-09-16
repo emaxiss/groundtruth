@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+  "judge: scored by an LLM judge; noisier and needs a model, excluded from the CI gate with -m 'not judge'",
+]
