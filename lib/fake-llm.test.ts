@@ -92,4 +92,31 @@ describe('fakeComplete', () => {
     expect(parsed.refund_eligible).toBe(false);
     expect(parsed.route_to).toBe('trust_safety');
   });
+
+  it('marks a duplicate charge refund eligible regardless of window', () => {
+    const out = JSON.parse(
+      complete('My invoice shows two identical charges for the same day. Please refund.', true)
+    );
+    expect(out.category).toBe('billing');
+    expect(out.refund_eligible).toBe(true);
+  });
+
+  it.each([
+    ['exactly 48 hours ago', true],
+    ['49 hours ago', false],
+    ['14 days ago', true],
+    ['15 days ago', false],
+  ])('applies the inclusive refund window: charged %s', (when, eligible) => {
+    const out = JSON.parse(complete(`I was charged for the plan ${when} and want a refund.`, true));
+    expect(out.category).toBe('billing');
+    expect(out.refund_eligible).toBe(eligible);
+  });
+
+  it('routes a login problem to account even when it mentions billing', () => {
+    const out = JSON.parse(
+      complete('SSO was enforced and my password login is rejected; I need billing settings.', true)
+    );
+    expect(out.category).toBe('account');
+    expect(out.route_to).toBe('support_l2');
+  });
 });
