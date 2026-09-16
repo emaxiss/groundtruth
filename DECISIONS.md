@@ -52,3 +52,7 @@ Design choices and their reasoning. One line each.
 - A 429 from the app raises a distinct `RateLimited` outcome instead of a failed assertion, because a throttled request scored as a wrong answer would misreport the agent.
 - The fake model's triage fixtures are ordered most-specific first (refund eligibility and account issues before the general billing probe), so the fake satisfies the dataset's boundary cases without a lookup table keyed on the dataset itself.
 - `httpx` and `pytest` are the only harness dependencies until the judge tier lands; versions are pinned in `evals/requirements.txt`.
+- Run reports are written by pytest hooks in `conftest.py` and the arithmetic lives in `evals/report.py` as pure functions, so the delta logic has unit tests that need no app.
+- Rate-limited cases appear in the report but are excluded from the pass-rate denominator; a report says how many were throttled instead of quietly lowering the rate.
+- The delta compares only case ids present in both runs; added or removed cases are listed but never counted as a regression or a fix, so editing the dataset cannot fake an improvement.
+- Reports are compared within a tier: a judge run is never the baseline for a deterministic run, because the two measure different things.
