@@ -6,7 +6,9 @@ contract. A failure is a hard failure; there is no threshold to tune.
 
 from __future__ import annotations
 
+import os
 import re
+import time
 from typing import Any
 
 import httpx
@@ -29,11 +31,26 @@ class RateLimited(Exception):
     a throttled case scored as a failure would misreport the agent."""
 
 
+# Free-tier providers cap requests per minute. A delay between cases keeps a
+# run under the cap; a 429 that still gets through waits and retries before it
+# is reported as a rate-limited outcome.
+DELAY_S = float(os.environ.get("GROUNDTRUTH_EVAL_DELAY_MS", "0")) / 1000
+RETRY_BACKOFF_S = (5.0, 15.0, 30.0)
+
+
 def post(client: httpx.Client, case: Case) -> httpx.Response:
-    res = client.post(f"/api/{case.endpoint}", json=case.input)
-    if res.status_code == 429:
-        raise RateLimited(f"{case.id}: provider rate limited ({res.text[:200]})")
-    return res
+    for attempt, backoff in enumerate((*RETRY_BACKOFF_S, None)):
+        if DELAY_S:
+            time.sleep(DELAY_S)
+        res = client.post(f"/api/{case.endpoint}", json=case.input)
+        if res.status_code != 429:
+            return res
+        # A daily cap does not clear in seconds; report it instead of waiting.
+        if backoff is None or "per-day" in res.text or "daily" in res.text:
+            raise RateLimited(f"{case.id}: provider rate limited after {attempt} retries ({res.text[:200]})")
+        retry_after = res.headers.get("retry-after")
+        time.sleep(float(retry_after) if retry_after and retry_after.isdigit() else backoff)
+    raise AssertionError("unreachable")
 
 
 def assert_triage_schema(body: Any) -> None:

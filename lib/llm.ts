@@ -44,11 +44,19 @@ function classify(err: unknown): LlmError {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export function fallbackModels(): string[] {
+  return (process.env.GROUNDTRUTH_FALLBACK_MODELS ?? '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean);
+}
+
 export async function complete({ system, user, jsonMode }: CompleteArgs): Promise<string> {
   if (isFakeMode()) return fakeComplete({ system, user, jsonMode });
 
   const model = process.env.GROUNDTRUTH_MODEL;
   if (!model) throw new LlmError('GROUNDTRUTH_MODEL is not set', 'config');
+  const fallbacks = fallbackModels();
 
   let lastErr: LlmError | null = null;
   // One retry. Rate limits get a longer backoff since free-tier ceilings are
@@ -64,7 +72,10 @@ export async function complete({ system, user, jsonMode }: CompleteArgs): Promis
         ],
         temperature: 0,
         ...(jsonMode ? { response_format: { type: 'json_object' as const } } : {}),
-      });
+        // OpenRouter routes to the next entry when the primary errors or is
+        // rate limited. Other providers ignore the field.
+        ...(fallbacks.length > 0 ? { models: [model, ...fallbacks] } : {}),
+      } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
       const text = res.choices[0]?.message?.content?.trim();
       if (!text) throw new LlmError('Model returned an empty response', 'upstream');
       return text;
