@@ -10,7 +10,7 @@ export type Doc = { slug: string; title: string; body: string };
 const PINNED: Record<string, string[]> = {
   'plans-and-pricing': [
     'Free: $0, 3 boards, 5 users, 2 GB storage, no API, no SSO, no SLA.',
-    'Pro: $12/user/month or $120/user/year. Unlimited boards, 50 GB, API access.',
+    'Pro: $12/user/month or $120/user/year (equivalent to $10/user/month, a 17% discount). Unlimited boards, 50 GB, API access.',
     'Team: $29/user/month or $290/user/year. SAML SSO, SCIM, 500 GB, 99.9% SLA, audit log export. Minimum 3 seats.',
     'Pro has a 14-day free trial, once per workspace. Team has no trial.',
     'Nonprofit/education discount is 30%, requires documentation, not stackable with annual pricing.',

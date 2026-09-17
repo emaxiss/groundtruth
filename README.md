@@ -70,8 +70,10 @@ The default provider is OpenRouter over its OpenAI-compatible endpoint. Any prov
 
 ```bash
 GROUNDTRUTH_BASE_URL=https://openrouter.ai/api/v1
-GROUNDTRUTH_MODEL=deepseek/deepseek-chat-v3-0324:free
+GROUNDTRUTH_MODEL=google/gemma-4-31b-it:free
 GROUNDTRUTH_API_KEY=sk-or-v1-...
+# optional, OpenRouter only: tried in order when the primary errors or is throttled
+GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free
 
 # or run locally, offline, at zero cost:
 GROUNDTRUTH_BASE_URL=http://localhost:11434/v1
@@ -109,7 +111,7 @@ The design the harness will implement:
 
 - **Only the deterministic tier exists.** It proves the contract holds; it does not score answer quality. The judge tier and regression tracking are still ahead.
 - **The real-model path is under-verified.** Development has run against fake mode. The prompts are written but have not been hardened against a live model, which is exactly where guardrail prompts tend to fail. The model ID in `.env.example` is a placeholder until it is confirmed against OpenRouter's live model list.
-- **Free-tier providers are rate limited.** A full dataset run with judge metrics makes real contact with that ceiling. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, but a run can still be throttled.
+- **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
 - **Guardrails are prompt-level.** There is no separate classifier or moderation layer. The adversarial cases measure how far prompt-level defence actually goes, which is a narrower claim than "the agent is safe".
 
