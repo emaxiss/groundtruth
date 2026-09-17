@@ -23,7 +23,7 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 | DeepEval harness                                                   | Planned |
 | Playwright E2E suite                                               | Planned |
 
-The agent runs today and the deterministic tier of the harness gates every pull request. The judge tier and run-over-run tracking are described below and not built yet.
+The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one. The judge tier is described below and not built yet.
 
 ## Architecture
 
@@ -101,7 +101,7 @@ The design the harness will implement:
 
 **Threshold calibration.** A local 3B judge is a noisy instrument. Thresholds are calibrated low on purpose, which is a statement about the judge and not about the agent. Swapping in a stronger judge is an environment change; the thresholds should be raised when that happens, and this README should record what they were raised to and why.
 
-**Regression tracking.** Each run writes a timestamped JSON of per-case scores and per-category pass rates, and prints the delta against the previous run. A single pass rate tells you nothing; the delta tells you whether the last prompt edit cost you anything.
+**Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier: new failures, fixed cases, and the rate change per category. A single pass rate tells you nothing; the delta tells you whether the last prompt edit cost you anything. The format is documented in [`evals/README.md`](evals/README.md).
 
 **Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed. Provider rate limiting is raised as its own outcome rather than scored as a failed case, so a throttled run cannot masquerade as a regression.
 
@@ -109,7 +109,7 @@ The design the harness will implement:
 
 ## Limitations
 
-- **Only the deterministic tier exists.** It proves the contract holds; it does not score answer quality. The judge tier and regression tracking are still ahead.
+- **Only the deterministic tier exists.** It proves the contract holds; it does not score answer quality. The judge tier is still ahead.
 - **The real-model path is under-verified.** Development has run against fake mode. The prompts are written but have not been hardened against a live model, which is exactly where guardrail prompts tend to fail. The model ID in `.env.example` is a placeholder until it is confirmed against OpenRouter's live model list.
 - **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
