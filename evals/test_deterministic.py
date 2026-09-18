@@ -17,6 +17,7 @@ import pytest
 from conftest import Case
 
 DISCLAIMER = "AI-generated, may contain errors"
+MODEL_HEADER = "x-groundtruth-model"
 
 # Mirrors lib/schemas.ts TriageOutput.
 TRIAGE_ENUMS = {
@@ -69,8 +70,9 @@ def assert_field(body: dict[str, Any], field: str, want: Any) -> None:
     assert body.get(field) in allowed, f"{field}={body.get(field)!r}, expected one of {allowed}"
 
 
-def test_case(client: httpx.Client, case: Case) -> None:
+def test_case(client: httpx.Client, case: Case, record_property: Any) -> None:
     res = post(client, case)
+    record_property("served_model", res.headers.get(MODEL_HEADER))
     exp = case.expected
     assert res.status_code == exp["status"], f"status {res.status_code}: {res.text[:300]}"
     body = res.json()

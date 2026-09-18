@@ -102,7 +102,7 @@ The JSON carries the same numbers plus one entry per case:
 | `cases[].score`             | `1.0` or `0.0` on the deterministic tier; a judge metric score on the judge tier.                        |
 | `categories`, `totals`      | Per-category and overall counts: `passed`, `failed`, `rate_limited`, `skipped`, `scored`, `pass_rate`.   |
 
-The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost.
+The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost.
 
 ## Validation
 

@@ -31,6 +31,8 @@ Design choices and their reasoning. One line each.
 
 ## Chat and guardrails
 
+- The triage system prompt carries the same grounding block as chat; the first live run showed the classifier deciding refund eligibility without ever seeing the refund policy, and it hedged with `needs_review` because, as far as it could tell, nothing was documented.
+- Every chat and triage response carries an `x-groundtruth-model` header with the model the provider reports it served, because fallback routing otherwise swaps models silently and a live eval run cannot say what it measured.
 - The disclaimer is appended server-side in the route as a constant and never requested from the model; a model that forgets it cannot produce a non-compliant response, and the disclaimer check then tests the contract rather than model obedience.
 - Fake fixtures live in `lib/fake-llm.ts`, not inside `lib/llm.ts`, to keep the client thin; `complete()` delegates on its first line when `GROUNDTRUTH_FAKE_LLM=1`.
 - The fake intent classifier checks docs-fixture probes before the keyword scope check: "What does Pro cost?" contains no bare TaskLoop term, and loosening the keyword list to `pro` would match "problem" and "process".
@@ -60,6 +62,6 @@ Design choices and their reasoning. One line each.
 - Run reports are written by pytest hooks in `conftest.py` and the arithmetic lives in `evals/report.py` as pure functions, so the delta logic has unit tests that need no app.
 - Rate-limited cases appear in the report but are excluded from the pass-rate denominator; a report says how many were throttled instead of quietly lowering the rate.
 - The delta compares only case ids present in both runs; added or removed cases are listed but never counted as a regression or a fix, so editing the dataset cannot fake an improvement.
-- Reports are compared within a tier: a judge run is never the baseline for a deterministic run, because the two measure different things.
+- Reports are compared within a tier and a model: a judge run is never the baseline for a deterministic run, and a fake-mode run is never the baseline for a live one, because the delta is meant to price the last edit, not the change of instrument.
 - Out-of-scope cases assert on a family of decline phrasings rather than one sentence, because a live model declines in its own words; the sharper check on those cases is `must_not_match`, which proves no partial compliance.
 - The harness paces requests with `GROUNDTRUTH_EVAL_DELAY_MS` and retries a 429 with backoff, but raises immediately on a daily-cap 429, because a per-minute ceiling clears in seconds and a per-day one does not.

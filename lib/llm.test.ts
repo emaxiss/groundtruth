@@ -14,7 +14,7 @@ const ENV = { ...process.env };
 
 beforeEach(() => {
   create.mockReset();
-  create.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+  create.mockResolvedValue({ model: 'served/by', choices: [{ message: { content: 'ok' } }] });
   process.env.GROUNDTRUTH_FAKE_LLM = '0';
   process.env.GROUNDTRUTH_BASE_URL = 'https://example.test/v1';
   process.env.GROUNDTRUTH_API_KEY = 'k';
@@ -52,5 +52,20 @@ describe('complete', () => {
     expect(params.model).toBe('primary');
     expect(params.models).toEqual(['primary', 'second', 'third']);
     expect(params.response_format).toEqual({ type: 'json_object' });
+  });
+
+  it('returns the text with the model the provider reports it served', async () => {
+    await expect(complete({ system: 's', user: 'u' })).resolves.toEqual({
+      text: 'ok',
+      model: 'served/by',
+    });
+  });
+
+  it('falls back to the requested model when the provider omits it', async () => {
+    create.mockResolvedValue({ choices: [{ message: { content: 'ok' } }] });
+    await expect(complete({ system: 's', user: 'u' })).resolves.toEqual({
+      text: 'ok',
+      model: 'primary',
+    });
   });
 });

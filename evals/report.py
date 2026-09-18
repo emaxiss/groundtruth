@@ -24,6 +24,7 @@ class CaseResult:
     score: float | None  # 1.0 / 0.0 for deterministic cases, judge score later
     duration_ms: int
     message: str | None = None
+    served_model: str | None = None
 
 
 @dataclass
@@ -76,15 +77,20 @@ def write_report(report: Report, results_dir: Path) -> Path:
     return path
 
 
-def previous_report(results_dir: Path, current: Path, tier: str) -> Path | None:
-    """Most recent report of the same tier, excluding the one just written."""
+def previous_report(results_dir: Path, current: Path, tier: str, model: str | None = None) -> Path | None:
+    """Most recent report of the same tier and model, excluding the one just written.
+
+    A fake-mode run is never the baseline for a live run: the two measure
+    different things, and the delta between them would say nothing about the
+    last prompt edit.
+    """
     candidates = sorted(p for p in results_dir.glob("*.json") if p != current)
     for path in reversed(candidates):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if data.get("tier") == tier:
+        if data.get("tier") == tier and data.get("model") == model:
             return path
     return None
 
@@ -158,7 +164,20 @@ def format_report(report: dict[str, Any], path: Path) -> list[str]:
     ]
     for cat, s in report["categories"].items():
         lines.append(f"  {cat:<13} {s['passed']}/{s['scored']:<3} {_pct(s['pass_rate'])}")
+    served = served_models(report["cases"])
+    if served:
+        lines.append("served by: " + ", ".join(f"{m} ×{n}" for m, n in served.items()))
     return lines
+
+
+def served_models(cases: list[dict[str, Any]]) -> dict[str, int]:
+    """Which models actually answered, most frequent first. Empty when unknown."""
+    counts: dict[str, int] = {}
+    for c in cases:
+        m = c.get("served_model")
+        if m:
+            counts[m] = counts.get(m, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
 def format_delta(delta: dict[str, Any] | None, previous_path: Path | None) -> list[str]:

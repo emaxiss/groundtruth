@@ -130,6 +130,7 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
             score=score,
             duration_ms=int(rep.duration * 1000),
             message=message,
+            served_model=dict(rep.user_properties).get("served_model"),
         )
     )
 
@@ -164,7 +165,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     )
     path = write_report(report, results_dir)
     current = load_report(path)
-    prev_path = previous_report(results_dir, path, tier)
+    prev_path = previous_report(results_dir, path, tier, current.get("model"))
     delta = compute_delta(load_report(prev_path), current) if prev_path else None
 
     lines = config.stash[REPORT_KEY]

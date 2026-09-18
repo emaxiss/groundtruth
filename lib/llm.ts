@@ -4,7 +4,15 @@ import { fakeComplete } from './fake-llm';
 
 const TIMEOUT_MS = 60_000;
 
+// Response header naming the model that actually answered, so a caller (and
+// the eval harness) can tell a primary answer from a fallback one.
+export const MODEL_HEADER = 'x-groundtruth-model';
+
 export type CompleteArgs = { system: string; user: string; jsonMode?: boolean };
+
+// `model` is what the provider reports it served, which can differ from the
+// requested model when fallback routing is in play.
+export type Completion = { text: string; model: string };
 
 export class LlmError extends Error {
   constructor(
@@ -51,8 +59,8 @@ export function fallbackModels(): string[] {
     .filter(Boolean);
 }
 
-export async function complete({ system, user, jsonMode }: CompleteArgs): Promise<string> {
-  if (isFakeMode()) return fakeComplete({ system, user, jsonMode });
+export async function complete({ system, user, jsonMode }: CompleteArgs): Promise<Completion> {
+  if (isFakeMode()) return { text: fakeComplete({ system, user, jsonMode }), model: 'fake' };
 
   const model = process.env.GROUNDTRUTH_MODEL;
   if (!model) throw new LlmError('GROUNDTRUTH_MODEL is not set', 'config');
@@ -78,7 +86,7 @@ export async function complete({ system, user, jsonMode }: CompleteArgs): Promis
       } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
       const text = res.choices[0]?.message?.content?.trim();
       if (!text) throw new LlmError('Model returned an empty response', 'upstream');
-      return text;
+      return { text, model: res.model || model };
     } catch (err) {
       lastErr = err instanceof LlmError ? err : classify(err);
       if (lastErr.kind === 'config') throw lastErr;

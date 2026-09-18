@@ -72,7 +72,8 @@ The default provider is OpenRouter over its OpenAI-compatible endpoint. Any prov
 GROUNDTRUTH_BASE_URL=https://openrouter.ai/api/v1
 GROUNDTRUTH_MODEL=google/gemma-4-31b-it:free
 GROUNDTRUTH_API_KEY=sk-or-v1-...
-# optional, OpenRouter only: tried in order when the primary errors or is throttled
+# optional, OpenRouter only: tried in order when the primary errors or is throttled;
+# every response carries an x-groundtruth-model header naming the model that answered
 GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free
 
 # or run locally, offline, at zero cost:
