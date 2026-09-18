@@ -27,7 +27,11 @@ async function triage(ticket) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(ticket),
   });
-  return { status: res.status, body: await res.json() };
+  return {
+    status: res.status,
+    body: await res.json(),
+    model: res.headers.get('x-groundtruth-model'),
+  };
 }
 
 const health = await fetch(`${BASE}/api/health`).then((r) => r.json());
@@ -69,6 +73,7 @@ const billing = await triage({
   body: 'I was charged for the annual plan last month and would like a refund.',
   customer_plan: 'pro',
 });
+check('response names the model that served it', billing.model === 'fake', `got ${billing.model}`);
 check('billing ticket is classified as billing', billing.body.category === 'billing');
 check('billing ticket routes to the billing team', billing.body.route_to === 'billing_team');
 check(
