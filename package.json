@@ -22,6 +22,7 @@
     "verify:contract": "node scripts/verify-contract.mjs",
     "evals:validate": "python3 evals/validate_dataset.py",
     "evals:deterministic": "python3 -m pytest evals -m \"not judge\"",
+    "evals:judge": "python3 -m pytest evals -m judge",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
