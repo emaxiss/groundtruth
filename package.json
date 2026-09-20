@@ -2,6 +2,12 @@
   "name": "groundtruth",
   "version": "0.1.0",
   "private": true,
+  "description": "An AI customer-support agent built to be measured: a Next.js agent under test, graded black-box over HTTP by a Python eval harness.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emaxiss/groundtruth.git"
+  },
   "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": ">=22"
