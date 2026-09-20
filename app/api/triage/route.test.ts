@@ -10,6 +10,8 @@ vi.mock('@/lib/llm', async (importOriginal) => {
 });
 
 const { complete, LlmError } = await import('@/lib/llm');
+
+const completion = (text: string) => ({ text, model: 'test-model' });
 const { POST } = await import('./route');
 
 const VALID = {
@@ -33,7 +35,7 @@ const post = (body: string) =>
 const triage = (input: unknown = TICKET) => post(JSON.stringify(input));
 
 beforeEach(() => {
-  vi.mocked(complete).mockResolvedValue(JSON.stringify(VALID));
+  vi.mocked(complete).mockResolvedValue(completion(JSON.stringify(VALID)));
 });
 
 afterEach(() => {
@@ -60,7 +62,9 @@ describe('POST /api/triage', () => {
   });
 
   it('accepts a response wrapped in a code fence', async () => {
-    vi.mocked(complete).mockResolvedValue('```json\n' + JSON.stringify(VALID) + '\n```');
+    vi.mocked(complete).mockResolvedValue(
+      completion('```json\n' + JSON.stringify(VALID) + '\n```')
+    );
     expect((await triage()).status).toBe(200);
     expect(complete).toHaveBeenCalledTimes(1);
   });
@@ -72,8 +76,8 @@ describe('POST /api/triage', () => {
 describe('schema repair', () => {
   it('retries once with the schema errors when the first response is malformed', async () => {
     vi.mocked(complete)
-      .mockResolvedValueOnce('{"category":"billing"}')
-      .mockResolvedValueOnce(JSON.stringify(VALID));
+      .mockResolvedValueOnce(completion('{"category":"billing"}'))
+      .mockResolvedValueOnce(completion(JSON.stringify(VALID)));
 
     const res = await triage();
     expect(res.status).toBe(200);
@@ -86,14 +90,14 @@ describe('schema repair', () => {
 
   it('retries when the response is not JSON at all', async () => {
     vi.mocked(complete)
-      .mockResolvedValueOnce('Sure! Here is the classification.')
-      .mockResolvedValueOnce(JSON.stringify(VALID));
+      .mockResolvedValueOnce(completion('Sure! Here is the classification.'))
+      .mockResolvedValueOnce(completion(JSON.stringify(VALID)));
     expect((await triage()).status).toBe(200);
     expect(complete).toHaveBeenCalledTimes(2);
   });
 
   it('gives up after one repair attempt', async () => {
-    vi.mocked(complete).mockResolvedValue('{"category":"nonsense"}');
+    vi.mocked(complete).mockResolvedValue(completion('{"category":"nonsense"}'));
     const res = await triage();
     expect(res.status).toBe(502);
     expect(complete).toHaveBeenCalledTimes(2);
@@ -108,13 +112,13 @@ describe('schema repair', () => {
     ['an empty suggested reply', { ...VALID, suggested_reply: '   ' }],
     ['a string where a boolean belongs', { ...VALID, refund_eligible: 'maybe' }],
   ])('rejects %s', async (_label, payload) => {
-    vi.mocked(complete).mockResolvedValue(JSON.stringify(payload));
+    vi.mocked(complete).mockResolvedValue(completion(JSON.stringify(payload)));
     expect((await triage()).status).toBe(502);
   });
 
   it('accepts needs_review as a refund verdict', async () => {
     vi.mocked(complete).mockResolvedValue(
-      JSON.stringify({ ...VALID, refund_eligible: 'needs_review' })
+      completion(JSON.stringify({ ...VALID, refund_eligible: 'needs_review' }))
     );
     expect((await triage()).status).toBe(200);
     expect(complete).toHaveBeenCalledTimes(1);
@@ -169,7 +173,7 @@ describe('model failures', () => {
   // Both failures return 502, so the kind is what tells the eval harness
   // whether the provider broke or the model did not follow the contract.
   it('distinguishes a schema failure from an upstream failure', async () => {
-    vi.mocked(complete).mockResolvedValue('{}');
+    vi.mocked(complete).mockResolvedValue(completion('{}'));
     await expect((await triage()).json()).resolves.toMatchObject({ kind: 'schema' });
 
     vi.mocked(complete).mockRejectedValue(new LlmError('provider down', 'upstream'));

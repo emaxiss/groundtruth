@@ -6,7 +6,9 @@ contract. A failure is a hard failure; there is no threshold to tune.
 
 from __future__ import annotations
 
+import os
 import re
+import time
 from typing import Any
 
 import httpx
@@ -15,6 +17,32 @@ import pytest
 from conftest import Case
 
 DISCLAIMER = "AI-generated, may contain errors"
+MODEL_HEADER = "x-groundtruth-model"
+
+# Models emit typographic whitespace and dashes that are invisible in a diff
+# but break a plain regex: "7 days" with U+202F between the number and the
+# unit does not match `7 days`. Assertions are about content, not about which
+# codepoint the model chose to render a space with, so text is normalised
+# before matching. Unicode escapes are spelled out rather than pasted so the
+# intent survives an editor that helpfully "fixes" the file.
+_WHITESPACE = dict.fromkeys(
+    [
+        0x00A0,  # no-break space
+        0x2007,  # figure space
+        0x202F,  # narrow no-break space
+        0x2009,  # thin space
+        0x2002,  # en space
+        0x2003,  # em space
+    ],
+    " ",
+)
+_DASHES = dict.fromkeys([0x2010, 0x2011, 0x2012, 0x2013, 0x2014], "-")
+_TRANSLATION = {**_WHITESPACE, **_DASHES}
+
+
+def normalize(text: str) -> str:
+    """Fold typographic whitespace and dashes to their ASCII equivalents."""
+    return text.translate(_TRANSLATION)
 
 # Mirrors lib/schemas.ts TriageOutput.
 TRIAGE_ENUMS = {
@@ -29,11 +57,26 @@ class RateLimited(Exception):
     a throttled case scored as a failure would misreport the agent."""
 
 
+# Free-tier providers cap requests per minute. A delay between cases keeps a
+# run under the cap; a 429 that still gets through waits and retries before it
+# is reported as a rate-limited outcome.
+DELAY_S = float(os.environ.get("GROUNDTRUTH_EVAL_DELAY_MS", "0")) / 1000
+RETRY_BACKOFF_S = (5.0, 15.0, 30.0)
+
+
 def post(client: httpx.Client, case: Case) -> httpx.Response:
-    res = client.post(f"/api/{case.endpoint}", json=case.input)
-    if res.status_code == 429:
-        raise RateLimited(f"{case.id}: provider rate limited ({res.text[:200]})")
-    return res
+    for attempt, backoff in enumerate((*RETRY_BACKOFF_S, None)):
+        if DELAY_S:
+            time.sleep(DELAY_S)
+        res = client.post(f"/api/{case.endpoint}", json=case.input)
+        if res.status_code != 429:
+            return res
+        # A daily cap does not clear in seconds; report it instead of waiting.
+        if backoff is None or "per-day" in res.text or "daily" in res.text:
+            raise RateLimited(f"{case.id}: provider rate limited after {attempt} retries ({res.text[:200]})")
+        retry_after = res.headers.get("retry-after")
+        time.sleep(float(retry_after) if retry_after and retry_after.isdigit() else backoff)
+    raise AssertionError("unreachable")
 
 
 def assert_triage_schema(body: Any) -> None:
@@ -52,18 +95,19 @@ def assert_field(body: dict[str, Any], field: str, want: Any) -> None:
     assert body.get(field) in allowed, f"{field}={body.get(field)!r}, expected one of {allowed}"
 
 
-def test_case(client: httpx.Client, case: Case) -> None:
+def test_case(client: httpx.Client, case: Case, record_property: Any) -> None:
     res = post(client, case)
+    record_property("served_model", res.headers.get(MODEL_HEADER))
     exp = case.expected
     assert res.status_code == exp["status"], f"status {res.status_code}: {res.text[:300]}"
     body = res.json()
 
     if case.endpoint == "chat":
-        text = body["answer"]
+        text = normalize(body["answer"])
         assert DISCLAIMER in text, "answer is missing the server-side disclaimer"
     else:
         assert_triage_schema(body)
-        text = body["suggested_reply"]
+        text = normalize(body["suggested_reply"])
         for field in ("category", "route_to", "severity"):
             if field in exp:
                 assert_field(body, field, exp[field])

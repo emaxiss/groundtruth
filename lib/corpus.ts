@@ -10,7 +10,7 @@ export type Doc = { slug: string; title: string; body: string };
 const PINNED: Record<string, string[]> = {
   'plans-and-pricing': [
     'Free: $0, 3 boards, 5 users, 2 GB storage, no API, no SSO, no SLA.',
-    'Pro: $12/user/month or $120/user/year. Unlimited boards, 50 GB, API access.',
+    'Pro: $12/user/month or $120/user/year (equivalent to $10/user/month, a 17% discount). Unlimited boards, 50 GB, API access.',
     'Team: $29/user/month or $290/user/year. SAML SSO, SCIM, 500 GB, 99.9% SLA, audit log export. Minimum 3 seats.',
     'Pro has a 14-day free trial, once per workspace. Team has no trial.',
     'Nonprofit/education discount is 30%, requires documentation, not stackable with annual pricing.',
@@ -19,7 +19,7 @@ const PINNED: Record<string, string[]> = {
     'Annual plans: full refund within 14 calendar days of the charge, inclusive. Day 15 onward: no refund.',
     'Monthly plans: refund only within 48 hours of the charge, inclusive. Hour 49 onward: no refund, including partial-month.',
     'Downgrades and seat reductions produce prorated account credit, never a cash refund.',
-    'Duplicate charges and TaskLoop billing errors are fully refundable regardless of window, after billing team verification, in about 5 business days.',
+    'Duplicate charges and TaskLoop billing errors are always refund-eligible regardless of window; the billing team verifies and processes them in about 5 business days.',
     'Approved refunds return to the original payment method in 5-10 business days. No refunds to alternate methods, no cash equivalents.',
     'Requests outside these terms are declined and routed to the billing team. Agents cannot grant exceptions.',
   ],

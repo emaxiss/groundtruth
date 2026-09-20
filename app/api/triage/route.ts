@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { complete, LlmError } from '@/lib/llm';
+import { complete, LlmError, MODEL_HEADER } from '@/lib/llm';
 import { triageSystemPrompt, triageUserPrompt, TRIAGE_REPAIR_PREFIX } from '@/lib/prompts';
 import { TriageInput, TriageOutput, type ApiError } from '@/lib/schemas';
 
@@ -61,20 +61,22 @@ export async function POST(req: Request) {
   const user = triageUserPrompt(parsed.data);
 
   try {
-    const first = parseTriage(await complete({ system, user, jsonMode: true }));
-    if (first.ok) return NextResponse.json(first.data);
+    const attempt = await complete({ system, user, jsonMode: true });
+    const first = parseTriage(attempt.text);
+    if (first.ok)
+      return NextResponse.json(first.data, { headers: { [MODEL_HEADER]: attempt.model } });
 
     // One repair attempt. The model is shown its own schema errors rather than
     // being asked again blind, because a second identical prompt tends to
     // reproduce the same malformed output.
-    const repaired = parseTriage(
-      await complete({
-        system,
-        user: `${TRIAGE_REPAIR_PREFIX}\n\nErrors:\n${first.errors.join('\n')}\n\n${user}`,
-        jsonMode: true,
-      })
-    );
-    if (repaired.ok) return NextResponse.json(repaired.data);
+    const retry = await complete({
+      system,
+      user: `${TRIAGE_REPAIR_PREFIX}\n\nErrors:\n${first.errors.join('\n')}\n\n${user}`,
+      jsonMode: true,
+    });
+    const repaired = parseTriage(retry.text);
+    if (repaired.ok)
+      return NextResponse.json(repaired.data, { headers: { [MODEL_HEADER]: retry.model } });
 
     return NextResponse.json<ApiError>(
       {

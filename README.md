@@ -20,7 +20,10 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 | CI: format, lint, typecheck, test, build, dataset, contract, evals | Working |
 | Ticket triage (structured output)                                  | Working |
 | Golden dataset (30 cases)                                          | Working |
-| DeepEval harness                                                   | Planned |
+| Eval harness, deterministic tier                                   | Working |
+| Run reports with run-over-run delta                                | Working |
+| Live-model verification                                            | Working |
+| Eval harness, judge tier (DeepEval)                                | Planned |
 | Playwright E2E suite                                               | Planned |
 
 The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one. The judge tier is described below and not built yet.
@@ -70,8 +73,13 @@ The default provider is OpenRouter over its OpenAI-compatible endpoint. Any prov
 
 ```bash
 GROUNDTRUTH_BASE_URL=https://openrouter.ai/api/v1
-GROUNDTRUTH_MODEL=deepseek/deepseek-chat-v3-0324:free
+GROUNDTRUTH_MODEL=google/gemma-4-31b-it:free
 GROUNDTRUTH_API_KEY=sk-or-v1-...
+# optional, OpenRouter only: tried in order when the primary errors or is throttled;
+# every response carries an x-groundtruth-model header naming the model that answered
+# every id must end in ":free" or the client refuses the call; opt in with
+# GROUNDTRUTH_ALLOW_PAID_MODELS=1
+GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free
 
 # or run locally, offline, at zero cost:
 GROUNDTRUTH_BASE_URL=http://localhost:11434/v1
@@ -108,8 +116,9 @@ The design the harness will implement:
 ## Limitations
 
 - **Only the deterministic tier exists.** It proves the contract holds; it does not score answer quality. The judge tier is still ahead.
-- **The real-model path is under-verified.** Development has run against fake mode. The prompts are written but have not been hardened against a live model, which is exactly where guardrail prompts tend to fail. The model ID in `.env.example` is a placeholder until it is confirmed against OpenRouter's live model list.
-- **Free-tier providers are rate limited.** A full dataset run with judge metrics makes real contact with that ceiling. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, but a run can still be throttled.
+- **The live results come from one provider and one run.** The deterministic tier passes 30/30 against a live model, but a single clean run is a weaker claim than a stable one: the free pool routes between models run to run, and these prompts have not been exercised against a frontier model or across providers.
+- **Free-tier providers are unreliable as well as rate limited.** Upstream capacity errors arrive as a 200 with no completion in it, and the shared free pool for a given model is often saturated, so fallback routing answers instead. A live run reports which model actually served each case for exactly this reason.
+- **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
 - **Guardrails are prompt-level.** There is no separate classifier or moderation layer. The adversarial cases measure how far prompt-level defence actually goes, which is a narrower claim than "the agent is safe".
 
