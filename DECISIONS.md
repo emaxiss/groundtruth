@@ -27,6 +27,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - The grounding block is cached in-module after the first build; the corpus is static at runtime, so there is no invalidation path.
 - `scripts/print-grounding.ts` runs under Node's native TypeScript type stripping to avoid adding a dev dependency for a one-file script.
 - Docs state facts as absolutes with inclusive boundary language on the 14-day and 48-hour windows, so edge-case evals at the boundary have an unambiguous expected answer.
+- The pinned refund facts spell out the boundary arithmetic ("exactly 14 days after the charge is day 14 and qualifies"), because the judge tier caught the agent telling a day-14 customer they were on day 15 in one run of four; the model should not have to do the inclusive count itself.
 - The pinned Pro pricing fact carries the annual equivalent and the 17% discount, because the model cannot state a figure the grounding block omits; the first live run failed on exactly that, and the fix belongs in the corpus, not the prompt.
 
 ## Chat and guardrails
@@ -60,7 +61,11 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - Every dataset case expects HTTP 200; error-path behaviour belongs to the route tests, and a case that cannot get a 200 in fake mode is a fixture gap, not an eval result.
 - A 429 from the app raises a distinct `RateLimited` outcome instead of a failed assertion, because a throttled request scored as a wrong answer would misreport the agent.
 - The fake model's triage fixtures are ordered most-specific first (refund eligibility and account issues before the general billing probe), so the fake satisfies the dataset's boundary cases without a lookup table keyed on the dataset itself.
-- `httpx` and `pytest` are the only harness dependencies until the judge tier lands; versions are pinned in `evals/requirements.txt`.
+- `httpx` and `pytest` are the only harness dependencies; versions are pinned in `evals/requirements.txt`.
+- The judge is a 150-line module rather than an evaluation framework: the framework considered would add 66 packages, including telemetry and a CLI stack, to provide two metrics, and it would keep the grading rubric outside the repository where it cannot be reviewed alongside the thresholds it produces.
+- The judge uses a different model family from the agent (`nex-agi/nex-n2.5-pro:free` against an agent served by Nemotron or Gemma), because a model grading its own answers shares its blind spots.
+- Correctness is scored on rubric anchors (1.0 / 0.7 / 0.3 / 0.0) and the threshold sits at 0.5, between "a secondary fact is missing" and "a figure is wrong or the verdict is hedged"; the threshold was set from three calibration runs and is documented next to the spread that produced it, so a future judge swap has a procedure rather than a guess.
+- A judge that fails to return a valid score is recorded as `skipped`, never as a low score, because a broken instrument must not read as a broken agent.
 - Run reports are written by pytest hooks in `conftest.py` and the arithmetic lives in `evals/report.py` as pure functions, so the delta logic has unit tests that need no app.
 - Rate-limited cases appear in the report but are excluded from the pass-rate denominator; a report says how many were throttled instead of quietly lowering the rate.
 - The delta compares only case ids present in both runs; added or removed cases are listed but never counted as a regression or a fix, so editing the dataset cannot fake an improvement.
