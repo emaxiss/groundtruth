@@ -36,6 +36,7 @@ Design choices and their reasoning. One line each.
 - The disclaimer is appended server-side in the route as a constant and never requested from the model; a model that forgets it cannot produce a non-compliant response, and the disclaimer check then tests the contract rather than model obedience.
 - Fake fixtures live in `lib/fake-llm.ts`, not inside `lib/llm.ts`, to keep the client thin; `complete()` delegates on its first line when `GROUNDTRUTH_FAKE_LLM=1`.
 - The fake intent classifier checks docs-fixture probes before the keyword scope check: "What does Pro cost?" contains no bare TaskLoop term, and loosening the keyword list to `pro` would match "problem" and "process".
+- A provider can answer 200 with an error payload and no `choices` array at all, so the client checks the shape before indexing it; without that guard an upstream capacity blip surfaced as `Cannot read properties of undefined` behind a 502, which reads like our bug rather than theirs.
 - `LlmError` carries a typed `kind` (`rate_limited`, `timeout`, `upstream`, `config`) mapped to distinct HTTP statuses (429, 504, 502, 500), so a caller can tell provider rate limiting from a genuine model failure.
 - Retry backoff is 2000 ms for rate limits and 400 ms otherwise; free-tier ceilings are per minute, so an immediate retry would waste the second attempt.
 - `temperature: 0` on all calls; an eval baseline wants the least-noisy output the provider offers.
