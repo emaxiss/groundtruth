@@ -4,7 +4,7 @@
 
 An AI customer-support agent, built to be measured. The agent answers questions about TaskLoop, a fictional project-management SaaS, using only its documentation. The interesting part is not the agent: it is the evaluation harness that grades it, written in Python and testing the app black-box over HTTP as a separate stack.
 
-The split is deliberate. Shipping an LLM feature is easy; knowing whether it still works after a prompt edit, a model swap, or a docs change is the hard part. This repo is an argument about how to know that — a golden dataset with an explicit taxonomy, deterministic metrics that cannot flake, judge-based metrics quarantined behind a marker, and run-over-run regression tracking.
+The split is deliberate. Shipping an LLM feature is easy; knowing whether it still works after a prompt edit, a model swap, or a docs change is the hard part. This repo is an argument about how to know that — a golden dataset with an explicit taxonomy, deterministic assertions that cannot flake, run-over-run regression tracking, and a black-box harness that reports which model actually answered.
 
 ![The chat interface answering a documented pricing question, then declining a prompt-injection attempt](docs/chat.png)
 
@@ -26,17 +26,17 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 | Eval harness, judge tier (DeepEval)                                | Planned |
 | Playwright E2E suite                                               | Planned |
 
-The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one. The judge tier is described below and not built yet.
+The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one. The judge tier and the browser suite are listed as planned because they are: nothing below describes them as if they existed.
 
 ## Architecture
 
 ```
                     ┌────────────────────────┐
                     │  Python eval harness   │
-                    │  DeepEval + pytest     │
+                    │  pytest + httpx        │
                     │                        │
-                    │  deterministic metrics │
-                    │  judge metrics  (-m)   │
+                    │  30 golden cases       │
+                    │  run reports + delta   │
                     └───────────┬────────────┘
                                 │ HTTP (black box)
                                 ▼
@@ -89,7 +89,7 @@ GROUNDTRUTH_API_KEY=ollama
 
 ### Running without a model
 
-`GROUNDTRUTH_FAKE_LLM=1` makes `lib/llm.ts` return canned responses from a fixture map keyed by intent. The API and UI behave identically; responses are byte-identical across runs. This exists so the E2E and contract layers can assert on exact output without a live model, and it is what CI runs:
+`GROUNDTRUTH_FAKE_LLM=1` makes `lib/llm.ts` return canned responses from a fixture map keyed by intent. The API and UI behave identically; responses are byte-identical across runs. This exists so the contract verifier and the eval harness can assert on exact output without a live model, and it is what CI runs:
 
 ```bash
 pnpm build
@@ -99,24 +99,22 @@ pnpm verify:contract
 
 ## Eval design
 
-The design the harness will implement:
-
 **Dataset taxonomy.** Thirty golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), and `edge` (boundary cases — a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
 
-**Deterministic before judged.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and incapable of flaking. These are hard failures. Judge-based metrics (answer relevancy, correctness against a reference) sit behind a `judge` pytest marker, so `pytest -m "not judge"` is a fully deterministic gate suitable for CI, and the judged suite is a separate, noisier signal.
+**Deterministic first.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and incapable of flaking. These are hard failures with no threshold to tune. Assertion text is normalised for typographic whitespace and dashes first, because a model that writes "7 days" with a narrow no-break space has not got the fact wrong.
 
-**Threshold calibration.** A local 3B judge is a noisy instrument. Thresholds are calibrated low on purpose, which is a statement about the judge and not about the agent. Swapping in a stronger judge is an environment change; the thresholds should be raised when that happens, and this README should record what they were raised to and why.
+**Judged second, and quarantined.** Answer quality (relevancy, correctness against the `reference` field each factual case carries) is a job for an LLM judge, and a judge is a noisier instrument than a regex. That tier is planned, not built. The `judge` pytest marker is already registered so that `pytest -m "not judge"` stays a fully deterministic CI gate when it lands, and its thresholds will be calibrated against the judge in use and recorded in the decisions log.
 
-**Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier: new failures, fixed cases, and the rate change per category. A single pass rate tells you nothing; the delta tells you whether the last prompt edit cost you anything. The format is documented in [`evals/README.md`](evals/README.md).
+**Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier and model: new failures, fixed cases, and the rate change per category. A single pass rate tells you nothing; the delta tells you whether the last prompt edit cost you anything. The format is documented in [`evals/README.md`](evals/README.md).
 
-**Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed. Provider rate limiting is raised as its own outcome rather than scored as a failed case, so a throttled run cannot masquerade as a regression.
+**Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed. Provider rate limiting is raised as its own outcome rather than scored as a failed case, so a throttled run cannot masquerade as a regression. Every response names the model that served it, and the run report counts them, because with fallback routing on that is the only way to know what a run measured.
 
-**Where RAG slots in.** The grounding block is currently a curated set of facts compiled from `docs-corpus/`, not retrieval. When retrieval replaces it, the retrieved chunks become the `retrieval_context` DeepEval already expects, and faithfulness and contextual-recall metrics attach to the existing cases without the dataset changing.
+**Where RAG slots in.** The grounding block is currently a curated set of facts compiled from `docs-corpus/`, not retrieval. When retrieval replaces it, the retrieved chunks become the retrieval context a faithfulness metric needs, and that metric attaches to the existing cases without the dataset changing.
 
 ## Limitations
 
 - **Only the deterministic tier exists.** It proves the contract holds; it does not score answer quality. The judge tier is still ahead.
-- **The live results come from one provider and one run.** The deterministic tier passes 30/30 against a live model, but a single clean run is a weaker claim than a stable one: the free pool routes between models run to run, and these prompts have not been exercised against a frontier model or across providers.
+- **The live results come from one provider and few runs.** Two live reports are checked in under [`docs/results/`](docs/results/). The 30/30 run was served entirely by the fallback model, `nvidia/nemotron-3-super-120b-a12b:free`, because the free pool for the configured default was saturated. The earlier 25/30 run predates the served-model header, so which model answered it is unknown. Neither is a claim about `google/gemma-4-31b-it:free` specifically, and these prompts have not been exercised against a frontier model or across providers.
 - **Free-tier providers are unreliable as well as rate limited.** Upstream capacity errors arrive as a 200 with no completion in it, and the shared free pool for a given model is often saturated, so fallback routing answers instead. A live run reports which model actually served each case for exactly this reason.
 - **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
@@ -129,9 +127,9 @@ app/           Next.js App Router: UI and API routes
 lib/           LLM client, prompts, zod schemas, corpus loader, unit tests
 docs-corpus/   Twelve markdown files; the future RAG corpus
 scripts/       Grounding budget check, black-box contract verifier
-evals/         Golden dataset, validation script, pytest harness (deterministic tier)
-e2e/           Playwright suite (planned)
-DECISIONS.md   Design decisions and their reasoning, one line each
+evals/         Golden dataset, validation script, pytest harness, run reports
+docs/results/  Two checked-in live run reports, referenced from Limitations
+DECISIONS.md   Design decisions and their reasoning
 ```
 
 ## License

@@ -1,12 +1,12 @@
 # Decisions
 
-Design choices and their reasoning. One line each.
+Design choices and their reasoning, one entry each: the decision, then why.
 
 ## Naming
 
 - The project is named for the eval harness, not the support bot: the harness is the deliverable and the bot is the fixture it grades.
 - TaskLoop is the fictional SaaS under test and is named independently of the project.
-- All environment variables share the `GROUNDTRUTH_` prefix: `GROUNDTRUTH_BASE_URL`, `GROUNDTRUTH_MODEL`, `GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_FAKE_LLM`, `GROUNDTRUTH_APP_URL`, `GROUNDTRUTH_JUDGE_MODEL`.
+- All environment variables share the `GROUNDTRUTH_` prefix. App: `GROUNDTRUTH_BASE_URL`, `GROUNDTRUTH_MODEL`, `GROUNDTRUTH_FALLBACK_MODELS`, `GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_ALLOW_PAID_MODELS`, `GROUNDTRUTH_FAKE_LLM`. Harness: `GROUNDTRUTH_APP_URL`, `GROUNDTRUTH_EVAL_DELAY_MS`, `GROUNDTRUTH_RESULTS_DIR`.
 
 ## Providers
 
