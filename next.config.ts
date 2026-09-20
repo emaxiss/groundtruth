@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // The dev overlay floats over the UI and intercepts clicks the Playwright
-  // suite will target.
+  // The dev overlay floats over the composer and intercepts clicks from
+  // browser automation.
   devIndicators: false,
 };
 

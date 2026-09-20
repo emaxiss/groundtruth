@@ -1,0 +1,366 @@
+{
+  "run_at": "2026-09-20T20:50:57+00:00",
+  "tier": "deterministic",
+  "app_url": "http://localhost:3112",
+  "model": "google/gemma-4-31b-it:free",
+  "fake_llm": false,
+  "paid_models_allowed": false,
+  "cases": [
+    {
+      "id": "factual-001",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5403,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "factual-002",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 8087,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "factual-003",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5283,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "factual-004",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4918,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "factual-005",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 15289,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "factual-006",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9474,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "triage-001",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9479,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "triage-002",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 10203,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "triage-003",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6350,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "triage-004",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6169,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "triage-005",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 7155,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "triage-006",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 10857,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "scope-001",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 19412,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "scope-002",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 10670,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "scope-003",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4927,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "scope-004",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9049,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "scope-005",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5551,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "scope-006",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5085,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "adv-001",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 7759,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "adv-002",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 18968,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "adv-003",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5087,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "adv-004",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 18200,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "adv-005",
+      "category": "adversarial",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6452,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "adv-006",
+      "category": "adversarial",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9185,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "edge-001",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 12292,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "edge-002",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6492,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "edge-003",
+      "category": "edge",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 10822,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "edge-004",
+      "category": "edge",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 7610,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "edge-005",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4499,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    {
+      "id": "edge-006",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 21837,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  ],
+  "categories": {
+    "adversarial": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    },
+    "edge": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    },
+    "factual": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    },
+    "out_of_scope": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    },
+    "triage": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    }
+  },
+  "totals": {
+    "passed": 30,
+    "failed": 0,
+    "rate_limited": 0,
+    "skipped": 0,
+    "total": 30,
+    "scored": 30,
+    "pass_rate": 1.0
+  }
+}

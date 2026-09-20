@@ -30,7 +30,7 @@ export function classifyIntent(user: string, jsonMode?: boolean): FakeIntent {
 }
 
 // Deterministic canned responses. Keyed by intent, then by a topic probe so the
-// docs_question fixture can answer the handful of facts the E2E suite asserts on.
+// docs_question fixture can answer the documented facts the dataset asserts on.
 const DOCS_FIXTURES: Array<{ probe: RegExp; answer: string }> = [
   {
     probe: /pro.{0,20}(cost|price|pricing|much)|(cost|price|much).{0,20}pro/i,
