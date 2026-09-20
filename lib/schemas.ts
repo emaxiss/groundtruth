@@ -65,5 +65,7 @@ export const HealthResponse = z.object({
   model: z.string().nullable(),
   corpus_docs: z.number(),
   grounding_tokens: z.number(),
+  paid_models_allowed: z.boolean(),
+  all_models_free: z.boolean(),
 });
 export type HealthResponse = z.infer<typeof HealthResponse>;

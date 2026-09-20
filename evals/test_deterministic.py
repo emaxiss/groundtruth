@@ -19,6 +19,31 @@ from conftest import Case
 DISCLAIMER = "AI-generated, may contain errors"
 MODEL_HEADER = "x-groundtruth-model"
 
+# Models emit typographic whitespace and dashes that are invisible in a diff
+# but break a plain regex: "7 days" with U+202F between the number and the
+# unit does not match `7 days`. Assertions are about content, not about which
+# codepoint the model chose to render a space with, so text is normalised
+# before matching. Unicode escapes are spelled out rather than pasted so the
+# intent survives an editor that helpfully "fixes" the file.
+_WHITESPACE = dict.fromkeys(
+    [
+        0x00A0,  # no-break space
+        0x2007,  # figure space
+        0x202F,  # narrow no-break space
+        0x2009,  # thin space
+        0x2002,  # en space
+        0x2003,  # em space
+    ],
+    " ",
+)
+_DASHES = dict.fromkeys([0x2010, 0x2011, 0x2012, 0x2013, 0x2014], "-")
+_TRANSLATION = {**_WHITESPACE, **_DASHES}
+
+
+def normalize(text: str) -> str:
+    """Fold typographic whitespace and dashes to their ASCII equivalents."""
+    return text.translate(_TRANSLATION)
+
 # Mirrors lib/schemas.ts TriageOutput.
 TRIAGE_ENUMS = {
     "category": {"billing", "bug", "how_to", "feature_request", "account", "abuse"},
@@ -78,11 +103,11 @@ def test_case(client: httpx.Client, case: Case, record_property: Any) -> None:
     body = res.json()
 
     if case.endpoint == "chat":
-        text = body["answer"]
+        text = normalize(body["answer"])
         assert DISCLAIMER in text, "answer is missing the server-side disclaimer"
     else:
         assert_triage_schema(body)
-        text = body["suggested_reply"]
+        text = normalize(body["suggested_reply"])
         for field in ("category", "route_to", "severity"):
             if field in exp:
                 assert_field(body, field, exp[field])

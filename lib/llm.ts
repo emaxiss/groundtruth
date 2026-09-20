@@ -59,12 +59,38 @@ export function fallbackModels(): string[] {
     .filter(Boolean);
 }
 
+// OpenRouter bills any model whose id does not end in `:free`. An account with
+// credit will happily serve one, so a typo in an env var is the difference
+// between a free run and a charged one. Opt in explicitly or not at all.
+export function paidModelsAllowed(): boolean {
+  return process.env.GROUNDTRUTH_ALLOW_PAID_MODELS === '1';
+}
+
+export function isFreeModel(model: string): boolean {
+  return model.trim().endsWith(':free');
+}
+
+/** Throws unless every model in the routing list is free, or paid use is opted into. */
+export function assertModelsAllowed(models: string[]): void {
+  if (paidModelsAllowed()) return;
+  const paid = models.filter((m) => !isFreeModel(m));
+  if (paid.length === 0) return;
+  throw new LlmError(
+    `Refusing to call a paid model: ${paid.join(', ')}. ` +
+      'Every model id must end in ":free", or set GROUNDTRUTH_ALLOW_PAID_MODELS=1 to opt in.',
+    'config'
+  );
+}
+
 export async function complete({ system, user, jsonMode }: CompleteArgs): Promise<Completion> {
   if (isFakeMode()) return { text: fakeComplete({ system, user, jsonMode }), model: 'fake' };
 
   const model = process.env.GROUNDTRUTH_MODEL;
   if (!model) throw new LlmError('GROUNDTRUTH_MODEL is not set', 'config');
   const fallbacks = fallbackModels();
+  // Checked before the first request, so a misconfiguration fails loudly
+  // instead of quietly spending credit.
+  assertModelsAllowed([model, ...fallbacks]);
 
   let lastErr: LlmError | null = null;
   // One retry. Rate limits get a longer backoff since free-tier ceilings are
