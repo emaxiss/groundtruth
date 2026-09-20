@@ -64,7 +64,7 @@ pip install -r evals/requirements.txt      # or: uv venv evals/.venv && uv pip i
 pnpm evals:deterministic                   # pytest evals -m "not judge"
 ```
 
-`GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up.
+`GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up, or if the app is configured with a model that would be billed.
 
 Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; `3500` keeps a run under the free tier's per-minute ceiling. A 429 is retried with backoff (or the `Retry-After` value) up to three times, then raised as `RateLimited`, a distinct outcome from a failed assertion. A daily-cap 429 is raised immediately since waiting would not clear it.
 

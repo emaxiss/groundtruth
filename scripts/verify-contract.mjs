@@ -37,6 +37,16 @@ async function triage(ticket) {
 const health = await fetch(`${BASE}/api/health`).then((r) => r.json());
 check('health reports fake mode', health.fake_llm === true, `got ${health.fake_llm}`);
 check('health reports full corpus', health.corpus_docs === 12, `got ${health.corpus_docs}`);
+check(
+  'health reports no paid model is permitted',
+  health.paid_models_allowed === false,
+  `got ${health.paid_models_allowed}`
+);
+check(
+  'health reports the routing list is free',
+  health.all_models_free === true,
+  `got ${health.all_models_free}`
+);
 
 const pro = await chat('What does Pro cost?');
 check('factual answer cites documented price', pro.body.answer?.includes('$12'));

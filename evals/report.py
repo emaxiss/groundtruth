@@ -34,6 +34,7 @@ class Report:
     app_url: str
     model: str | None
     fake_llm: bool | None
+    paid_models_allowed: bool | None
     cases: list[CaseResult]
     categories: dict[str, dict[str, Any]] = field(default_factory=dict)
     totals: dict[str, Any] = field(default_factory=dict)

@@ -24,7 +24,15 @@ def case(id: str, category: str, outcome: str) -> CaseResult:
 
 
 def report(cases: list[CaseResult], tier: str = "deterministic") -> Report:
-    return Report(run_at="2026-01-01T00:00:00+00:00", tier=tier, app_url="http://x", model=None, fake_llm=True, cases=cases)
+    return Report(
+        run_at="2026-01-01T00:00:00+00:00",
+        tier=tier,
+        app_url="http://x",
+        model=None,
+        fake_llm=True,
+        paid_models_allowed=False,
+        cases=cases,
+    )
 
 
 def as_dict(r: Report) -> dict:
