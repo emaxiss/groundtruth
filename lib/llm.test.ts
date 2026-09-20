@@ -68,4 +68,23 @@ describe('complete', () => {
       model: 'primary',
     });
   });
+
+  it.each([
+    ['a payload with no choices key', { model: 'm' }],
+    ['an empty choices array', { model: 'm', choices: [] }],
+    ['a non-array choices value', { model: 'm', choices: null }],
+  ])('maps %s to an upstream error instead of crashing', async (_label, payload) => {
+    create.mockResolvedValue(payload);
+    await expect(complete({ system: 's', user: 'u' })).rejects.toMatchObject({
+      name: 'LlmError',
+      kind: 'upstream',
+    });
+  });
+
+  it('includes the provider error message when one is present', async () => {
+    create.mockResolvedValue({ error: { message: 'upstream capacity exceeded' } });
+    await expect(complete({ system: 's', user: 'u' })).rejects.toThrow(
+      /upstream capacity exceeded/
+    );
+  });
 });

@@ -84,6 +84,14 @@ export async function complete({ system, user, jsonMode }: CompleteArgs): Promis
         // rate limited. Other providers ignore the field.
         ...(fallbacks.length > 0 ? { models: [model, ...fallbacks] } : {}),
       } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
+      // A provider can return 200 with an error payload and no `choices` at
+      // all (upstream capacity errors surface this way through routing), so
+      // this cannot assume the documented shape.
+      const choices: unknown = (res as { choices?: unknown }).choices;
+      if (!Array.isArray(choices) || choices.length === 0) {
+        const detail = (res as { error?: { message?: string } }).error?.message;
+        throw new LlmError(`Model returned no choices${detail ? `: ${detail}` : ''}`, 'upstream');
+      }
       const text = res.choices[0]?.message?.content?.trim();
       if (!text) throw new LlmError('Model returned an empty response', 'upstream');
       return { text, model: res.model || model };
