@@ -84,12 +84,15 @@ tier: deterministic · model: fake · 30 cases · 29 passed, 1 failed · pass ra
   factual       6/6   100.0%
   out_of_scope  6/6   100.0%
   triage        6/6   100.0%
+served by: nvidia/nemotron-3-super-120b-a12b:free ×30
 delta vs 2026-09-16T17-39-52Z.json:
   new failures:  edge-004
   fixed:         none
   overall: 100.0% -> 96.7% (-3.3)
   edge: 100.0% -> 83.3% (-16.7)
 ```
+
+The `served by:` line counts the `x-groundtruth-model` header on each response. With fallback routing configured, it is how you know whether the primary model or a fallback produced a run; in fake mode it reads `fake ×30`.
 
 The JSON carries the same numbers plus one entry per case:
 
@@ -110,4 +113,4 @@ The baseline is the most recent report with the same tier and the same model, so
 pnpm evals:validate
 ```
 
-Checks the count, unique ids, six-per-category balance, id prefixes, input limits, enum values against the triage contract, that every regex compiles, and that exactly one chat case sits at the 2000-character limit. Standard library only; runs in CI before the app builds.
+Checks the count, unique ids, six-per-category balance, id prefixes, input limits, enum values against the triage contract, that every regex compiles, and that exactly one chat case sits at the 2000-character limit. Standard library only; runs in CI as a gate alongside the app build.

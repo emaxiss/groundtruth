@@ -61,7 +61,7 @@ export function Page() {
           </div>
         </div>
         <p className="mt-3.5 max-w-xl text-xs leading-relaxed text-dim">
-          TaskLoop support agent. System under test for the DeepEval harness in{' '}
+          TaskLoop support agent. The system under test for the eval harness in{' '}
           <span className="text-faint">evals/</span>.
         </p>
       </header>

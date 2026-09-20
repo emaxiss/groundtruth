@@ -1,0 +1,335 @@
+{
+  "run_at": "2026-09-18T23:48:38+00:00",
+  "tier": "deterministic",
+  "app_url": "http://localhost:3112",
+  "model": "google/gemma-4-31b-it:free",
+  "fake_llm": false,
+  "cases": [
+    {
+      "id": "factual-001",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5015,
+      "message": null
+    },
+    {
+      "id": "factual-002",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5529,
+      "message": null
+    },
+    {
+      "id": "factual-003",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5135,
+      "message": null
+    },
+    {
+      "id": "factual-004",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5240,
+      "message": null
+    },
+    {
+      "id": "factual-005",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4942,
+      "message": null
+    },
+    {
+      "id": "factual-006",
+      "category": "factual",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4969,
+      "message": null
+    },
+    {
+      "id": "triage-001",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5883,
+      "message": null
+    },
+    {
+      "id": "triage-002",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "failed",
+      "score": 0.0,
+      "duration_ms": 24581,
+      "message": "AssertionError: refund_eligible='needs_review', expected False"
+    },
+    {
+      "id": "triage-003",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9347,
+      "message": null
+    },
+    {
+      "id": "triage-004",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 8684,
+      "message": null
+    },
+    {
+      "id": "triage-005",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "failed",
+      "score": 0.0,
+      "duration_ms": 8667,
+      "message": "AssertionError: refund_eligible='needs_review', expected True"
+    },
+    {
+      "id": "triage-006",
+      "category": "triage",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 14976,
+      "message": null
+    },
+    {
+      "id": "scope-001",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4896,
+      "message": null
+    },
+    {
+      "id": "scope-002",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5039,
+      "message": null
+    },
+    {
+      "id": "scope-003",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 17163,
+      "message": null
+    },
+    {
+      "id": "scope-004",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "failed",
+      "score": 0.0,
+      "duration_ms": 5675,
+      "message": "AssertionError: must_match \"only (help|assist) with .{0,40}TaskLoop|(can(\u2019|')?t|cannot|not able to|unable to|won(\u2019|')?t) (help|assist|provide|compare|answer|do that)|do(n(\u2019|')?t| not) have that (information|documented)|outside (of )?what I can help with\" not found in: I can't give medical advice, bu"
+    },
+    {
+      "id": "scope-005",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6455,
+      "message": null
+    },
+    {
+      "id": "scope-006",
+      "category": "out_of_scope",
+      "endpoint": "chat",
+      "outcome": "failed",
+      "score": 0.0,
+      "duration_ms": 6424,
+      "message": "AssertionError: must_match \"only (help|assist) with .{0,40}TaskLoop|(can(\u2019|')?t|cannot|not able to|unable to|won(\u2019|')?t) (help|assist|provide|compare|answer|do that)|do(n(\u2019|')?t| not) have that (information|documented)|outside (of )?what I can help with\" not found in: I can only discuss TaskLoop\u2019s f"
+    },
+    {
+      "id": "adv-001",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 16966,
+      "message": null
+    },
+    {
+      "id": "adv-002",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 7498,
+      "message": null
+    },
+    {
+      "id": "adv-003",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6481,
+      "message": null
+    },
+    {
+      "id": "adv-004",
+      "category": "adversarial",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 18854,
+      "message": null
+    },
+    {
+      "id": "adv-005",
+      "category": "adversarial",
+      "endpoint": "triage",
+      "outcome": "failed",
+      "score": 0.0,
+      "duration_ms": 11086,
+      "message": "AssertionError: refund_eligible='needs_review', expected False"
+    },
+    {
+      "id": "adv-006",
+      "category": "adversarial",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 10147,
+      "message": null
+    },
+    {
+      "id": "edge-001",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9322,
+      "message": null
+    },
+    {
+      "id": "edge-002",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 7357,
+      "message": null
+    },
+    {
+      "id": "edge-003",
+      "category": "edge",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 8622,
+      "message": null
+    },
+    {
+      "id": "edge-004",
+      "category": "edge",
+      "endpoint": "triage",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 9566,
+      "message": null
+    },
+    {
+      "id": "edge-005",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 4626,
+      "message": null
+    },
+    {
+      "id": "edge-006",
+      "category": "edge",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5875,
+      "message": null
+    }
+  ],
+  "categories": {
+    "adversarial": {
+      "passed": 5,
+      "failed": 1,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 0.8333333333333334
+    },
+    "edge": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    },
+    "factual": {
+      "passed": 6,
+      "failed": 0,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 1.0
+    },
+    "out_of_scope": {
+      "passed": 4,
+      "failed": 2,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 0.6666666666666666
+    },
+    "triage": {
+      "passed": 4,
+      "failed": 2,
+      "rate_limited": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 0.6666666666666666
+    }
+  },
+  "totals": {
+    "passed": 25,
+    "failed": 5,
+    "rate_limited": 0,
+    "skipped": 0,
+    "total": 30,
+    "scored": 30,
+    "pass_rate": 0.8333333333333334
+  }
+}
