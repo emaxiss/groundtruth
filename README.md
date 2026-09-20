@@ -97,6 +97,21 @@ GROUNDTRUTH_FAKE_LLM=1 pnpm start &
 pnpm verify:contract
 ```
 
+## What each layer proves
+
+Six layers, cheapest first. Each one is there because the layer below it cannot catch what it catches.
+
+| Layer                              | Runs against                         | Proves                                                                                         | Cannot prove                                                        |
+| ---------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Unit tests (Vitest, `lib/`)        | Pure functions                       | The corpus budget, schemas, prompt assembly, fake fixtures, and the client's error mapping.    | Anything about HTTP, routing, or a real model.                      |
+| Route tests (Vitest, `app/api/`)   | Handlers, model mocked               | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400. | That the app boots, or that the fake and the mock agree.            |
+| Contract verifier (`scripts/`)     | Built app, fake mode, over HTTP      | The deployed API honours its contract and is byte-identical across runs.                       | Anything a real model does.                                         |
+| Deterministic eval tier (`evals/`) | Running app, fake or live, over HTTP | Thirty documented behaviours hold: numbers, refusals, classifications, boundaries.             | Answer quality, or that a passing regex means a good answer.        |
+| Judge eval tier                    | Planned                              | Relevancy and correctness against each case's reference answer.                                | Not built; the marker exists so the tier above stays deterministic. |
+| Browser suite                      | Planned                              | The UI wires to the API and shows each state.                                                  | Not built.                                                          |
+
+The first four run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
+
 ## Eval design
 
 **Dataset taxonomy.** Thirty golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), and `edge` (boundary cases — a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
