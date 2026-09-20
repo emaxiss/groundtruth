@@ -25,6 +25,7 @@ class CaseResult:
     duration_ms: int
     message: str | None = None
     served_model: str | None = None
+    scores: dict[str, Any] | None = None  # judge tier: relevancy, correctness, judge_model
 
 
 @dataclass

@@ -117,18 +117,35 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
     rep: pytest.TestReport = outcome.get_result()
     if rep.when != "call" or not hasattr(item, "callspec"):
         return
-    case = item.callspec.params.get("case")
+    case = item.callspec.params.get("case") or item.callspec.params.get("judged")
     if not isinstance(case, Case):
         return
+    if call.excinfo is not None and call.excinfo.typename == "JudgeError":
+        # The judge failed to score, which says nothing about the agent.
+        item.config.stash[RESULTS_KEY].append(
+            CaseResult(
+                id=case.id,
+                category=case.category,
+                endpoint=case.endpoint,
+                outcome="skipped",
+                score=None,
+                duration_ms=int(rep.duration * 1000),
+                message=f"judge error: {call.excinfo.value}"[:300],
+                served_model=dict(rep.user_properties).get("served_model"),
+            )
+        )
+        return
 
+    props = dict(rep.user_properties)
     if rep.passed:
-        result, score, message = "passed", 1.0, None
+        result, score, message = "passed", float(props.get("score", 1.0)), props.get("rationale")
     elif rep.skipped:
         result, score, message = "skipped", None, _first_line(rep.longreprtext)
     elif call.excinfo is not None and call.excinfo.typename == "RateLimited":
         result, score, message = "rate_limited", None, str(call.excinfo.value)
     else:
-        result, score, message = "failed", 0.0, _failure_message(rep)
+        result, message = "failed", _failure_message(rep)
+        score = float(props["score"]) if "score" in props else 0.0
 
     item.config.stash[RESULTS_KEY].append(
         CaseResult(
@@ -139,7 +156,8 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
             score=score,
             duration_ms=int(rep.duration * 1000),
             message=message,
-            served_model=dict(rep.user_properties).get("served_model"),
+            served_model=props.get("served_model"),
+            scores=props.get("scores"),
         )
     )
 

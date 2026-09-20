@@ -123,6 +123,3 @@ def test_case(client: httpx.Client, case: Case, record_property: Any) -> None:
         assert hit is None, f"must_not_match {pattern!r} matched {hit.group(0)!r} in: {text[:300]}"
 
 
-@pytest.mark.judge
-def test_judge_tier_placeholder() -> None:
-    pytest.skip("judge tier is not implemented yet")
