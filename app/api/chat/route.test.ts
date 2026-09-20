@@ -10,6 +10,8 @@ vi.mock('@/lib/llm', async (importOriginal) => {
 });
 
 const { complete, LlmError } = await import('@/lib/llm');
+
+const completion = (text: string) => ({ text, model: 'test-model' });
 const { POST } = await import('./route');
 
 const post = (body: string) => POST(new Request('http://test/api/chat', { method: 'POST', body }));
@@ -17,7 +19,7 @@ const post = (body: string) => POST(new Request('http://test/api/chat', { method
 const chat = (message: unknown) => post(JSON.stringify({ message }));
 
 beforeEach(() => {
-  vi.mocked(complete).mockResolvedValue('The Pro plan is $12 per user per month.');
+  vi.mocked(complete).mockResolvedValue(completion('The Pro plan is $12 per user per month.'));
 });
 
 afterEach(() => {
@@ -58,7 +60,7 @@ describe('disclaimer', () => {
   });
 
   it('appends it even when the model never mentions it', async () => {
-    vi.mocked(complete).mockResolvedValue('No disclaimer here.');
+    vi.mocked(complete).mockResolvedValue(completion('No disclaimer here.'));
     const body = ChatResponse.parse(await (await chat('What does Pro cost?')).json());
     expect(body.answer).toContain(AI_DISCLAIMER);
   });

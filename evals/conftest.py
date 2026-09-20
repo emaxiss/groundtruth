@@ -76,7 +76,16 @@ def client(app_url: str, request: pytest.FixtureRequest) -> httpx.Client:
             pytest.exit(f"app not reachable at {app_url} ({e}); set GROUNDTRUTH_APP_URL", returncode=2)
         if health.status_code != 200:
             pytest.exit(f"/api/health returned {health.status_code} at {app_url}", returncode=2)
-        request.config.stash[HEALTH_KEY] = health.json()
+        body = health.json()
+        # A run that quietly spends money is worse than a run that does not
+        # happen, so this refuses before the first case rather than after.
+        if not body.get("all_models_free") and not body.get("paid_models_allowed"):
+            pytest.exit(
+                f"app at {app_url} is configured with a paid model ({body.get('model')}); "
+                "point GROUNDTRUTH_MODEL at a ':free' model or set GROUNDTRUTH_ALLOW_PAID_MODELS=1",
+                returncode=2,
+            )
+        request.config.stash[HEALTH_KEY] = body
         yield c
 
 
@@ -130,6 +139,7 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
             score=score,
             duration_ms=int(rep.duration * 1000),
             message=message,
+            served_model=dict(rep.user_properties).get("served_model"),
         )
     )
 
@@ -160,11 +170,12 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         app_url=os.environ.get("GROUNDTRUTH_APP_URL", DEFAULT_APP_URL).rstrip("/"),
         model=health.get("model"),
         fake_llm=health.get("fake_llm"),
+        paid_models_allowed=health.get("paid_models_allowed"),
         cases=results,
     )
     path = write_report(report, results_dir)
     current = load_report(path)
-    prev_path = previous_report(results_dir, path, tier)
+    prev_path = previous_report(results_dir, path, tier, current.get("model"))
     delta = compute_delta(load_report(prev_path), current) if prev_path else None
 
     lines = config.stash[REPORT_KEY]

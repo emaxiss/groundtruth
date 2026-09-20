@@ -12,6 +12,7 @@ from report import (
     format_delta,
     format_report,
     previous_report,
+    served_models,
     summarize,
     write_report,
 )
@@ -23,7 +24,15 @@ def case(id: str, category: str, outcome: str) -> CaseResult:
 
 
 def report(cases: list[CaseResult], tier: str = "deterministic") -> Report:
-    return Report(run_at="2026-01-01T00:00:00+00:00", tier=tier, app_url="http://x", model=None, fake_llm=True, cases=cases)
+    return Report(
+        run_at="2026-01-01T00:00:00+00:00",
+        tier=tier,
+        app_url="http://x",
+        model=None,
+        fake_llm=True,
+        paid_models_allowed=False,
+        cases=cases,
+    )
 
 
 def as_dict(r: Report) -> dict:
@@ -74,16 +83,19 @@ def test_delta_lists_added_and_removed_cases_without_counting_them_as_changes() 
     assert d["fixed"] == []
 
 
-def test_previous_report_picks_the_latest_of_the_same_tier(tmp_path: Path) -> None:
-    (tmp_path / "2026-01-01T00-00-00Z.json").write_text(json.dumps({"tier": "deterministic"}))
-    (tmp_path / "2026-01-02T00-00-00Z.json").write_text(json.dumps({"tier": "judge"}))
-    (tmp_path / "2026-01-03T00-00-00Z.json").write_text(json.dumps({"tier": "deterministic"}))
-    current = tmp_path / "2026-01-04T00-00-00Z.json"
-    current.write_text(json.dumps({"tier": "deterministic"}))
-    assert previous_report(tmp_path, current, "deterministic") == tmp_path / "2026-01-03T00-00-00Z.json"
-    assert previous_report(tmp_path, current, "judge") == tmp_path / "2026-01-02T00-00-00Z.json"
-    (tmp_path / "2026-01-05T00-00-00Z.json").write_text("not json")
-    assert previous_report(tmp_path, current, "deterministic") == tmp_path / "2026-01-03T00-00-00Z.json"
+def test_previous_report_picks_the_latest_of_the_same_tier_and_model(tmp_path: Path) -> None:
+    (tmp_path / "2026-01-01T00-00-00Z.json").write_text(json.dumps({"tier": "deterministic", "model": "fake"}))
+    (tmp_path / "2026-01-02T00-00-00Z.json").write_text(json.dumps({"tier": "judge", "model": "fake"}))
+    (tmp_path / "2026-01-03T00-00-00Z.json").write_text(json.dumps({"tier": "deterministic", "model": "fake"}))
+    (tmp_path / "2026-01-04T00-00-00Z.json").write_text(json.dumps({"tier": "deterministic", "model": "live/x"}))
+    current = tmp_path / "2026-01-05T00-00-00Z.json"
+    current.write_text(json.dumps({"tier": "deterministic", "model": "fake"}))
+    assert previous_report(tmp_path, current, "deterministic", "fake") == tmp_path / "2026-01-03T00-00-00Z.json"
+    assert previous_report(tmp_path, current, "deterministic", "live/x") == tmp_path / "2026-01-04T00-00-00Z.json"
+    assert previous_report(tmp_path, current, "judge", "fake") == tmp_path / "2026-01-02T00-00-00Z.json"
+    assert previous_report(tmp_path, current, "deterministic", "live/y") is None
+    (tmp_path / "2026-01-06T00-00-00Z.json").write_text("not json")
+    assert previous_report(tmp_path, current, "deterministic", "fake") == tmp_path / "2026-01-03T00-00-00Z.json"
 
 
 def test_write_report_never_overwrites_within_the_same_second(tmp_path: Path) -> None:
@@ -108,3 +120,14 @@ def test_formatting_is_readable_and_names_the_regression(tmp_path: Path) -> None
     assert "new failures:  b" in delta_lines[1]
     assert "overall: 100.0% -> 50.0% (-50.0)" in delta_lines[3]
     assert format_delta(None, None) == ["delta: no previous run of this tier to compare against"]
+
+
+def test_served_models_counts_most_frequent_first() -> None:
+    cases = [
+        {"served_model": "a"},
+        {"served_model": "b"},
+        {"served_model": "b"},
+        {"served_model": None},
+    ]
+    assert served_models(cases) == {"b": 2, "a": 1}
+    assert served_models([{"served_model": None}]) == {}

@@ -64,7 +64,13 @@ pip install -r evals/requirements.txt      # or: uv venv evals/.venv && uv pip i
 pnpm evals:deterministic                   # pytest evals -m "not judge"
 ```
 
-`GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up. A 429 from the app is raised as `RateLimited`, a distinct outcome from a failed assertion.
+`GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up, or if the app is configured with a model that would be billed.
+
+Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; `3500` keeps a run under the free tier's per-minute ceiling. A 429 is retried with backoff (or the `Retry-After` value) up to three times, then raised as `RateLimited`, a distinct outcome from a failed assertion. A daily-cap 429 is raised immediately since waiting would not clear it.
+
+```bash
+GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm evals:deterministic
+```
 
 ## Run reports
 
@@ -96,7 +102,7 @@ The JSON carries the same numbers plus one entry per case:
 | `cases[].score`             | `1.0` or `0.0` on the deterministic tier; a judge metric score on the judge tier.                        |
 | `categories`, `totals`      | Per-category and overall counts: `passed`, `failed`, `rate_limited`, `skipped`, `scored`, `pass_rate`.   |
 
-The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost.
+The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost.
 
 ## Validation
 
