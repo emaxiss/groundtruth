@@ -72,6 +72,38 @@ Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; 
 GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm evals:deterministic
 ```
 
+## Running the judge tier
+
+The judge tier scores answer quality on every chat case that carries a `reference`: nine cases today, the six `factual` ones and the three `edge` ones with a documented right answer. It is not a CI gate. It needs a key and a judge model, both read from the environment:
+
+```bash
+export GROUNDTRUTH_API_KEY=sk-or-v1-...
+export GROUNDTRUTH_JUDGE_MODEL=nex-agi/nex-n2.5-pro:free
+GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm evals:judge
+```
+
+The judge is `evals/judge.py`: one JSON-mode call per case returning `relevancy` and `correctness`, each in `[0, 1]`, plus a one-sentence rationale. The rubric is in the module and anchors correctness at 1.0 (every reference fact present), 0.7 (a secondary fact missing), 0.3 (a figure wrong or the verdict hedged), and 0.0 (verdict contradicted). The judge talks to the provider directly, uses a different model family from the agent so it is not grading its own answers, and is subject to the same `:free` rule.
+
+A judge that cannot produce a score (malformed JSON, provider error) is recorded as `skipped` with the error, not as a low score. A judge that is rate limited is `rate_limited`.
+
+### Thresholds and how they were set
+
+| Metric      | Threshold | Observed over 3 runs (9 cases each)                                     |
+| ----------- | --------- | ----------------------------------------------------------------------- |
+| relevancy   | 0.7       | 1.00 on every case in every run                                         |
+| correctness | 0.5       | 1.00 or 0.70 on every case, except one 0.30 on `factual-005` in one run |
+
+The threshold sits between two rubric anchors on purpose: an answer missing a secondary fact (0.7) passes, an answer with a wrong figure or a hedged verdict (0.3) fails. The single 0.30 was for "The Free plan allows 3 boards." with the reference's two secondary facts omitted, which the rubric itself says is a 0.7; that disagreement between the judge and its own rubric is the noise the tier is quarantined for. Re-run the calibration whenever the judge model changes:
+
+```bash
+pnpm evals:judge   # three times
+python3 evals/judge_spread.py --runs 3
+```
+
+`judge_spread.py` prints min / mean / max per case and metric across the last N judge reports and the lowest score seen anywhere.
+
+What the tier catches that the deterministic tier cannot: on the confirmation run after calibration, `edge-001` (a refund request exactly 14 days after an annual charge) scored 0.0 because the agent answered that day 14 was day 15 and declined the refund, having passed the same case in the three runs before. The deterministic assertions on that case are conservative regexes; the judge compared the verdict to the reference. The grounding fact now states the boundary arithmetic explicitly. Override the thresholds with `GROUNDTRUTH_JUDGE_RELEVANCY_MIN` and `GROUNDTRUTH_JUDGE_CORRECTNESS_MIN`.
+
 ## Run reports
 
 Every run writes `evals/results/<timestamp>.json` (gitignored; `GROUNDTRUTH_RESULTS_DIR` overrides the directory) and prints a summary plus the delta against the previous run of the same tier:
@@ -102,7 +134,8 @@ The JSON carries the same numbers plus one entry per case:
 | `model`, `fake_llm`         | Copied from `/api/health` so a report says what it measured.                                             |
 | `cases[]`                   | `id`, `category`, `endpoint`, `outcome`, `score`, `duration_ms`, and the assertion `message` on failure. |
 | `cases[].outcome`           | `passed`, `failed`, `rate_limited`, or `skipped`. Rate-limited cases are reported, not scored.           |
-| `cases[].score`             | `1.0` or `0.0` on the deterministic tier; a judge metric score on the judge tier.                        |
+| `cases[].score`             | `1.0` or `0.0` on the deterministic tier; the correctness score on the judge tier.                       |
+| `cases[].scores`            | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                          |
 | `categories`, `totals`      | Per-category and overall counts: `passed`, `failed`, `rate_limited`, `skipped`, `scored`, `pass_rate`.   |
 
 The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost.

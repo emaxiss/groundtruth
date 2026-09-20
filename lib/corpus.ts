@@ -16,8 +16,8 @@ const PINNED: Record<string, string[]> = {
     'Nonprofit/education discount is 30%, requires documentation, not stackable with annual pricing.',
   ],
   'refund-policy': [
-    'Annual plans: full refund within 14 calendar days of the charge, inclusive. Day 15 onward: no refund.',
-    'Monthly plans: refund only within 48 hours of the charge, inclusive. Hour 49 onward: no refund, including partial-month.',
+    'Annual plans: full refund within 14 calendar days of the charge, inclusive: a request exactly 14 days after the charge is day 14 and qualifies. Day 15 onward: no refund.',
+    'Monthly plans: refund only within 48 hours of the charge, inclusive: a request exactly 48 hours after the charge qualifies. Hour 49 onward: no refund, including partial-month.',
     'Downgrades and seat reductions produce prorated account credit, never a cash refund.',
     'Duplicate charges and TaskLoop billing errors are always refund-eligible regardless of window; the billing team verifies and processes them in about 5 business days.',
     'Approved refunds return to the original payment method in 5-10 business days. No refunds to alternate methods, no cash equivalents.',
