@@ -10,7 +10,6 @@ import re
 from typing import Any
 
 import httpx
-import pytest
 
 from harness.contract import DISCLAIMER, MODEL_HEADER, TRIAGE_ENUMS
 from harness.dataset import Case
@@ -60,5 +59,3 @@ def test_case(client: httpx.Client, case: Case, record_property: Any) -> None:
     for pattern in exp.get("must_not_match", []):
         hit = re.search(pattern, text, re.IGNORECASE)
         assert hit is None, f"must_not_match {pattern!r} matched {hit.group(0)!r} in: {text[:300]}"
-
-

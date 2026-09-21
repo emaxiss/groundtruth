@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import httpx
 import pytest
@@ -12,7 +11,9 @@ from pydantic import BaseModel
 from harness.dataset import DATASET
 from harness.judge import JudgeConfig, JudgeError, OpenRouterJudge, RateLimited, load_goldens
 
-CFG = JudgeConfig(base_url="https://judge.test/v1", api_key="k", model="j/one:free", fallback_models=("j/two:free",), allow_paid=False)
+CFG = JudgeConfig(
+    base_url="https://judge.test/v1", api_key="k", model="j/one:free", fallback_models=("j/two:free",), allow_paid=False
+)
 
 
 class Verdict(BaseModel):
@@ -63,10 +64,16 @@ def test_json_that_does_not_fit_the_schema_is_a_judge_error(content: str) -> Non
 
 def test_a_paid_judge_is_refused_before_any_call() -> None:
     with pytest.raises(JudgeError, match="paid judge model: openai/gpt-5"):
-        JudgeConfig(base_url="u", api_key="k", model="openai/gpt-5", fallback_models=(), allow_paid=False).assert_models_allowed()
+        JudgeConfig(
+            base_url="u", api_key="k", model="openai/gpt-5", fallback_models=(), allow_paid=False
+        ).assert_models_allowed()
     with pytest.raises(JudgeError, match="j/paid"):
-        JudgeConfig(base_url="u", api_key="k", model="j/one:free", fallback_models=("j/paid",), allow_paid=False).assert_models_allowed()
-    JudgeConfig(base_url="u", api_key="k", model="openai/gpt-5", fallback_models=(), allow_paid=True).assert_models_allowed()
+        JudgeConfig(
+            base_url="u", api_key="k", model="j/one:free", fallback_models=("j/paid",), allow_paid=False
+        ).assert_models_allowed()
+    JudgeConfig(
+        base_url="u", api_key="k", model="openai/gpt-5", fallback_models=(), allow_paid=True
+    ).assert_models_allowed()
 
 
 def test_daily_cap_is_raised_immediately(monkeypatch: pytest.MonkeyPatch) -> None:

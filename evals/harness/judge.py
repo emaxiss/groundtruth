@@ -55,7 +55,7 @@ class JudgeConfig:
     allow_paid: bool
 
     @classmethod
-    def from_env(cls) -> "JudgeConfig":
+    def from_env(cls) -> JudgeConfig:
         model = os.environ.get("GROUNDTRUTH_JUDGE_MODEL", "").strip()
         api_key = os.environ.get("GROUNDTRUTH_API_KEY", "").strip()
         if not model:
@@ -104,7 +104,9 @@ class OpenRouterJudge(DeepEvalBaseLLM):
 
     def __init__(self, config: JudgeConfig, client: httpx.Client | None = None):
         self.config = config
-        self.client = client or httpx.Client(base_url=config.base_url, timeout=httpx.Timeout(HTTP_TIMEOUT_S, connect=5.0))
+        self.client = client or httpx.Client(
+            base_url=config.base_url, timeout=httpx.Timeout(HTTP_TIMEOUT_S, connect=5.0)
+        )
         self.served_model: str | None = None
         super().__init__(config.model)
 
@@ -169,10 +171,22 @@ class OpenRouterJudge(DeepEvalBaseLLM):
 # were used to calibrate the thresholds, so a judge swap can be re-checked
 # against a fixed scale rather than free-form criteria.
 CORRECTNESS_RUBRIC = [
-    Rubric(score_range=(10, 10), expected_outcome="Every fact stated in the expected output is present in the actual output and matches (numbers, windows, yes/no verdicts). Extra correct detail is fine."),
-    Rubric(score_range=(7, 9), expected_outcome="The verdict and the main figure match the expected output, but a secondary fact from the expected output is missing."),
-    Rubric(score_range=(3, 6), expected_outcome="The verdict matches but a stated figure is wrong, or the verdict is hedged where the expected output is definite."),
-    Rubric(score_range=(0, 2), expected_outcome="The verdict contradicts the expected output, or a central figure is wrong."),
+    Rubric(
+        score_range=(10, 10),
+        expected_outcome="Every fact stated in the expected output is present in the actual output and matches (numbers, windows, yes/no verdicts). Extra correct detail is fine.",
+    ),
+    Rubric(
+        score_range=(7, 9),
+        expected_outcome="The verdict and the main figure match the expected output, but a secondary fact from the expected output is missing.",
+    ),
+    Rubric(
+        score_range=(3, 6),
+        expected_outcome="The verdict matches but a stated figure is wrong, or the verdict is hedged where the expected output is definite.",
+    ),
+    Rubric(
+        score_range=(0, 2),
+        expected_outcome="The verdict contradicts the expected output, or a central figure is wrong.",
+    ),
 ]
 
 

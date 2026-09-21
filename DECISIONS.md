@@ -8,6 +8,14 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - TaskLoop is the fictional SaaS under test and is named independently of the project.
 - All environment variables share the `GROUNDTRUTH_` prefix. App: `GROUNDTRUTH_BASE_URL`, `GROUNDTRUTH_MODEL`, `GROUNDTRUTH_FALLBACK_MODELS`, `GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_ALLOW_PAID_MODELS`, `GROUNDTRUTH_FAKE_LLM`. Harness: `GROUNDTRUTH_APP_URL`, `GROUNDTRUTH_EVAL_DELAY_MS`, `GROUNDTRUTH_RESULTS_DIR`.
 
+## Layout
+
+- Tests live under `tests/`, one folder per layer, rather than next to the source they cover: a reader can see the whole verification story in one tree, and each layer's config (`vitest.config.ts`, `playwright.config.ts`) points at exactly one folder.
+- The browser suite is written against page objects and custom fixtures so a spec reads as a user flow and a markup change is a one-file edit; the `api` fixture stubs the app's API from the browser side for error states no fake model produces.
+- Every `GROUNDTRUTH_*` variable is read in `lib/env.ts` and input limits live in `lib/limits.ts`, so the env contract and the client-side copy each have one source and cannot drift from the schemas.
+- The harness is a package (`evals/harness/`) with suites, unit tests, and tools in their own folders; `conftest.py` only sets DeepEval's environment and provides fixtures, and the report hooks are a named pytest plugin.
+- Python is linted and formatted with ruff in CI at a 120-column limit; rubric text and verbatim model phrasings are exempt from the line limit because wrapping them would change what is being asserted.
+
 ## Providers
 
 - Default provider is OpenRouter's `:free` tier rather than local Ollama; it gives better model quality than a 3B local model and keeps a 2 GB pull out of the quickstart.

@@ -20,7 +20,8 @@
 
 ---
 
-- [ ] `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass
-- [ ] `pnpm verify:contract` passes against the app in fake mode
+- [ ] `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` pass
+- [ ] `pnpm test:e2e` and `pnpm verify:contract` pass against the built app in fake mode
+- [ ] `ruff check evals`, `ruff format --check evals`, and `pytest evals -m "not judge"` pass
 - [ ] Behaviour changes are covered by a check that would fail without them
 - [ ] Docs updated if the contract, environment, or setup changed
