@@ -37,6 +37,7 @@ yarn-error.log*
 
 # python / evals
 __pycache__/
+.deepeval/
 .venv/
 .pytest_cache/
 evals/results/

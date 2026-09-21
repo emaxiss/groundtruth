@@ -10,21 +10,21 @@ Shipping an LLM feature is easy; knowing whether it still works after a prompt e
 
 ## Status
 
-| Component                                                               | State   |
-| ----------------------------------------------------------------------- | ------- |
-| Docs corpus + grounding block                                           | Working |
-| Provider-agnostic LLM client                                            | Working |
-| Chat endpoint and UI                                                    | Working |
-| Deterministic fake mode                                                 | Working |
-| Unit tests (Vitest)                                                     | Working |
-| CI: format, lint, typecheck, test, build, dataset, contract, e2e, evals | Working |
-| Ticket triage (structured output)                                       | Working |
-| Golden dataset (30 cases)                                               | Working |
-| Eval harness, deterministic tier                                        | Working |
-| Run reports with run-over-run delta                                     | Working |
-| Live-model verification                                                 | Working |
-| Eval harness, judge tier (DeepEval)                                     | Working |
-| Browser suite (Playwright)                                              | Working |
+| Component                                                                     | State   |
+| ----------------------------------------------------------------------------- | ------- |
+| Docs corpus + grounding block                                                 | Working |
+| Provider-agnostic LLM client                                                  | Working |
+| Chat endpoint and UI                                                          | Working |
+| Deterministic fake mode                                                       | Working |
+| Unit tests (Vitest)                                                           | Working |
+| CI: format, lint, typecheck, test, build, dataset, contract, e2e, evals, ruff | Working |
+| Ticket triage (structured output)                                             | Working |
+| Golden dataset (30 cases)                                                     | Working |
+| Eval harness, deterministic tier                                              | Working |
+| Run reports with run-over-run delta                                           | Working |
+| Live-model verification                                                       | Working |
+| Eval harness, judge tier (DeepEval)                                           | Working |
+| Browser suite (Playwright)                                                    | Working |
 
 The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one.
 
@@ -184,6 +184,10 @@ evals/                  Python eval harness (its own README)
 docs/results/           Two checked-in live run reports, referenced from Limitations
 DECISIONS.md            Design decisions and their reasoning
 ```
+
+## Contributing
+
+Setup, the full check list, and where new code goes are in [CONTRIBUTING.md](CONTRIBUTING.md). Vulnerability reports go through [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -156,7 +156,9 @@ def main() -> int:
         if by_cat.get(cat, 0) != PER_CATEGORY:
             errors.append(f"category '{cat}' has {by_cat.get(cat, 0)} cases, expected {PER_CATEGORY}")
 
-    longest = max((c for c in cases if c.get("endpoint") == "chat"), key=lambda c: len(c["input"]["message"]), default=None)
+    longest = max(
+        (c for c in cases if c.get("endpoint") == "chat"), key=lambda c: len(c["input"]["message"]), default=None
+    )
     if longest is None or len(longest["input"]["message"]) != MAX_MESSAGE:
         errors.append(f"no chat case sits exactly at the {MAX_MESSAGE}-character limit")
 
