@@ -42,6 +42,9 @@ __pycache__/
 .pytest_cache/
 evals/results/
 
+# promptfoo
+/redteam/results/
+
 # playwright
 /playwright-report/
 /test-results/

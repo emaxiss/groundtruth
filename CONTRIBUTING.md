@@ -25,6 +25,7 @@ Every pull request runs these in CI. Run them locally first.
 | Contract suite (starts the app itself)     | `pnpm test:contract`                                                                       |
 | Browser suite (starts the app itself)      | `pnpm test:e2e`                                                                            |
 | Harness lint, format, types, unit coverage | `ruff check evals && ruff format --check evals && pnpm evals:typecheck && pnpm evals:unit` |
+| Adversarial suite (needs a running app)    | `GROUNDTRUTH_APP_URL=http://localhost:3000 pnpm redteam`                                   |
 | Dataset validation                         | `pnpm evals:validate`                                                                      |
 | Deterministic eval tier (fake)             | `GROUNDTRUTH_FAKE_LLM=1 pnpm start & pnpm evals:deterministic`                             |
 
