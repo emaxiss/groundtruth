@@ -4,7 +4,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 
 ## Naming
 
-- The project is named for the eval harness, not the support bot: the harness is the deliverable and the bot is the fixture it grades.
+- The project is named for the eval harness, not the support bot: the harness is the main body of the repo and the bot is the fixture it grades.
 - TaskLoop is the fictional SaaS under test and is named independently of the project.
 - All environment variables share the `GROUNDTRUTH_` prefix. App: `GROUNDTRUTH_BASE_URL`, `GROUNDTRUTH_MODEL`, `GROUNDTRUTH_FALLBACK_MODELS`, `GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_ALLOW_PAID_MODELS`, `GROUNDTRUTH_FAKE_LLM`. Harness: `GROUNDTRUTH_APP_URL`, `GROUNDTRUTH_EVAL_DELAY_MS`, `GROUNDTRUTH_RESULTS_DIR`.
 
@@ -27,7 +27,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - The grounding block is cached in-module after the first build; the corpus is static at runtime, so there is no invalidation path.
 - `scripts/print-grounding.ts` runs under Node's native TypeScript type stripping to avoid adding a dev dependency for a one-file script.
 - Docs state facts as absolutes with inclusive boundary language on the 14-day and 48-hour windows, so edge-case evals at the boundary have an unambiguous expected answer.
-- The pinned refund facts spell out the boundary arithmetic ("exactly 14 days after the charge is day 14 and qualifies"), because the judge tier caught the agent telling a day-14 customer they were on day 15 in one run of four; the model should not have to do the inclusive count itself.
+- The pinned refund facts spell out the boundary arithmetic ("exactly 14 days after the charge is day 14 and qualifies"), because the judge tier caught the agent telling a day-14 customer they were on day 15 in one of the calibration runs; the model should not have to do the inclusive count itself.
 - The pinned Pro pricing fact carries the annual equivalent and the 17% discount, because the model cannot state a figure the grounding block omits; the first live run failed on exactly that, and the fix belongs in the corpus, not the prompt.
 
 ## Chat and guardrails
@@ -38,7 +38,8 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - Fake fixtures live in `lib/fake-llm.ts`, not inside `lib/llm.ts`, to keep the client thin; `complete()` delegates on its first line when `GROUNDTRUTH_FAKE_LLM=1`.
 - The fake intent classifier checks docs-fixture probes before the keyword scope check: "What does Pro cost?" contains no bare TaskLoop term, and loosening the keyword list to `pro` would match "problem" and "process".
 - The client refuses to call any model whose id does not end in `:free` unless `GROUNDTRUTH_ALLOW_PAID_MODELS=1`; the check runs before the first request, `/api/health` publishes both flags, and the eval harness exits rather than start a run that could spend money. An account holding credit will serve a paid model without complaint, so a typo in an env var is otherwise the only thing between a free run and a charged one.
-- A provider can answer 200 with an error payload and no `choices` array at all, so the client checks the shape before indexing it; without that guard an upstream capacity blip surfaced as `Cannot read properties of undefined` behind a 502, which reads like our bug rather than theirs.
+- The client rotates through the routing list itself (two passes, short backoff) instead of trusting provider-side routing alone, because OpenRouter only re-routes on some errors and an overloaded upstream answering 200 with no completion is not one of them; the harness records a case where every model failed as `unavailable`, the same treatment as a rate limit, so a provider outage cannot read as a regression.
+- A provider can answer 200 with an error payload and no `choices` array at all, so the client checks the shape before indexing it; without that guard an upstream capacity blip surfaced as `Cannot read properties of undefined` behind a 502, which reads like a bug in this code rather than a provider error.
 - `LlmError` carries a typed `kind` (`rate_limited`, `timeout`, `upstream`, `config`) mapped to distinct HTTP statuses (429, 504, 502, 500), so a caller can tell provider rate limiting from a genuine model failure.
 - Retry backoff is 2000 ms for rate limits and 400 ms otherwise; free-tier ceilings are per minute, so an immediate retry would waste the second attempt.
 - `temperature: 0` on all calls; an eval baseline wants the least-noisy output the provider offers.
@@ -57,12 +58,12 @@ Design choices and their reasoning, one entry each: the decision, then why.
 ## Evals
 
 - The harness is Python and talks to the app only over HTTP, so it exercises the deployed contract and cannot reach into route internals; it would catch a regression anywhere between the handler and the model.
-- Deterministic assertions (regex, schema, enum fields) are hard failures with no threshold; judge-scored metrics sit behind a `judge` pytest marker so `pytest -m "not judge"` is a fully deterministic CI gate.
+- Deterministic assertions (regex, schema, enum fields) are hard failures with no threshold; judge tier metrics sit behind a `judge` pytest marker so `pytest -m "not judge"` is a fully deterministic CI gate.
 - Every dataset case expects HTTP 200; error-path behaviour belongs to the route tests, and a case that cannot get a 200 in fake mode is a fixture gap, not an eval result.
 - A 429 from the app raises a distinct `RateLimited` outcome instead of a failed assertion, because a throttled request scored as a wrong answer would misreport the agent.
 - The fake model's triage fixtures are ordered most-specific first (refund eligibility and account issues before the general billing probe), so the fake satisfies the dataset's boundary cases without a lookup table keyed on the dataset itself.
 - `httpx` and `pytest` are the only harness dependencies; versions are pinned in `evals/requirements.txt`.
-- The judge tier runs on DeepEval because it is the pytest-native evaluation framework the field standardised on; a harness meant to be adopted by a team should speak the vocabulary that team already reads (`LLMTestCase`, `Golden`, `assert_test`, `GEval`), and its metric templates are maintained by people who do nothing else.
+- The judge tier runs on DeepEval because it integrates with pytest, its vocabulary (`LLMTestCase`, `Golden`, `assert_test`, `GEval`) is already familiar, and its metric templates are maintained upstream.
 - The judge model is a `DeepEvalBaseLLM` subclass rather than DeepEval's built-in OpenAI client, for three reasons: it applies the same `:free` guard as the app before any call, it forces JSON mode and validates the schema DeepEval hands to `generate()` locally (a judge that returns prose there fails every metric with a parse error), and it records which model actually served the request.
 - Correctness is a `GEval` metric with a four-level rubric (`Rubric` score ranges) rather than free-form criteria, so the scale the thresholds were calibrated on is fixed in code and a future judge swap is re-checked against the same anchors.
 - DeepEval's telemetry is opt-out; it is switched off in `evals/conftest.py` before any import, in `.env.example`, and in CI, because an evaluation harness should not phone home by default.
@@ -74,7 +75,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - Run reports are written by pytest hooks in `conftest.py` and the arithmetic lives in `evals/report.py` as pure functions, so the delta logic has unit tests that need no app.
 - Rate-limited cases appear in the report but are excluded from the pass-rate denominator; a report says how many were throttled instead of quietly lowering the rate.
 - The delta compares only case ids present in both runs; added or removed cases are listed but never counted as a regression or a fix, so editing the dataset cannot fake an improvement.
-- Reports are compared within a tier and a model: a judge run is never the baseline for a deterministic run, and a fake-mode run is never the baseline for a live one, because the delta is meant to price the last edit, not the change of instrument.
+- Reports are compared within a tier and a model: a judge run is never the baseline for a deterministic run, and a fake-mode run is never the baseline for a live one, because a delta across instruments would not measure the edit.
 - Assertion text is normalised before matching: models emit narrow no-break spaces and non-breaking hyphens that are invisible in a diff but silently break a plain regex, and an eval that flakes on a codepoint choice measures typography rather than the agent.
 - The out-of-scope decline pattern has its own regression test listing every phrasing a live model has actually produced, so widening it is a change backed by evidence instead of a guess made one failure at a time.
 - Out-of-scope cases assert on a family of decline phrasings rather than one sentence, because a live model declines in its own words; the sharper check on those cases is `must_not_match`, which proves no partial compliance.

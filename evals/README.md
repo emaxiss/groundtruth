@@ -14,7 +14,7 @@ The golden dataset for the TaskLoop support agent. The harness that runs it live
 | `adversarial`  | Prompt injection, prompt extraction, claimed authority, and social-engineered refunds.     |
 | `edge`         | Policy boundaries (day 14 vs 15, hour 48 vs 49) and input limits (near-empty, 2000 chars). |
 
-Every case documents why it exists. A case that cannot say what regression it would catch does not belong in the set.
+Every case documents why it exists in its `why` field.
 
 ## Case shape
 
@@ -52,7 +52,7 @@ Two invariants apply to every case and are not repeated per line: chat answers m
 
 ## Deterministic before judged
 
-`must_match`, `must_not_match`, `schema`, and the triage field assertions are necessary conditions checked with a regex or a parser. They cannot flake and they run in CI against the fake model. They are deliberately conservative: they prove the answer mentions the right number or refuses the right thing, not that it is a good answer. Answer quality is what the `reference` field and the judge tier are for.
+`must_match`, `must_not_match`, `schema`, and the triage field assertions are necessary conditions checked with a regex or a parser. Against the fake model they are fully deterministic, which is how CI runs them. They are conservative: they prove the answer mentions the right number or refuses the right thing, not that it is a good answer. Answer quality is what the `reference` field and the judge tier are for.
 
 ## Running the deterministic tier
 
@@ -66,7 +66,7 @@ pnpm evals:deterministic                   # pytest evals -m "not judge"
 
 `GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up, or if the app is configured with a model that would be billed.
 
-Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; `3500` keeps a run under the free tier's per-minute ceiling. A 429 is retried with backoff (or the `Retry-After` value) up to three times, then raised as `RateLimited`, a distinct outcome from a failed assertion. A daily-cap 429 is raised immediately since waiting would not clear it.
+Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; `3500` keeps a run under the free tier's per-minute ceiling. A 429 is retried with backoff (or the `Retry-After` value) up to three times, then raised as `RateLimited`, a distinct outcome from a failed assertion. A daily-cap 429 is raised immediately since waiting would not clear it. A 502, 503, or 504 (every model in the app's routing list failed upstream or timed out) is retried the same way, then raised as `ProviderUnavailable` and recorded as `unavailable`.
 
 ```bash
 GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm evals:deterministic
@@ -114,7 +114,7 @@ lowest observed: relevancy 1.00, correctness 0.70
 
 Across the six earlier calibration runs that fixed the metric configuration the floors were lower: relevancy 0.57 on `factual-004` (a correct answer that also explained the neighbouring plan, which the relevancy metric counts as off-topic statements) and correctness 0.60 on `edge-006` (a right verdict with a secondary fact missing). Both thresholds therefore sit at 0.5: relevancy 0.5 tolerates an answer that adds correct context, and correctness 0.5 sits between the 0.7 anchor (secondary fact missing) and the 0.3 anchor (a figure wrong or the verdict hedged).
 
-The correctness threshold sits between two rubric anchors on purpose: an answer missing a secondary fact passes, an answer with a wrong figure or a hedged verdict fails. Re-run the calibration whenever the judge model changes:
+Re-run the calibration whenever the judge model changes:
 
 ```bash
 pnpm evals:judge   # three times
@@ -123,7 +123,7 @@ python3 evals/judge_spread.py --runs 3
 
 `judge_spread.py` prints min / mean / max per case and metric across the last N judge reports and the lowest score seen anywhere. Override the thresholds with `GROUNDTRUTH_JUDGE_RELEVANCY_MIN` and `GROUNDTRUTH_JUDGE_CORRECTNESS_MIN`.
 
-One of the earlier calibration runs also showed what the tier is for. On `edge-001` (a refund request exactly 14 days after an annual purchase) the agent answered that day 14 was day 15 and outside the window. The deterministic tier passed it, because the answer mentioned "14" and matched none of the refusal patterns. The judge scored correctness 0.0 with the reason "contradicts the reference by saying a purchase exactly 14 days ago is on day 15 and not refundable". That is the class of regression this tier exists to catch, and the reason the correctness metric compares against a reference rather than a rubric alone.
+Example from an earlier calibration run. On `edge-001` (a refund request exactly 14 days after an annual purchase) the agent answered that day 14 was day 15 and outside the window. The deterministic tier passed it, because the answer mentioned "14" and matched none of the refusal patterns. The judge scored correctness 0.0 with the reason "contradicts the reference by saying a purchase exactly 14 days ago is on day 15 and not refundable". The reference comparison is what caught it; a rubric alone would not have.
 
 ## Run reports
 
@@ -145,7 +145,7 @@ delta vs 2026-09-16T17-39-52Z.json:
   edge: 100.0% -> 83.3% (-16.7)
 ```
 
-The `served by:` line counts the `x-groundtruth-model` header on each response. With fallback routing configured, it is how you know whether the primary model or a fallback produced a run; in fake mode it reads `fake ×30`.
+The `served by:` line counts the `x-groundtruth-model` header on each response. With fallback routing configured, it shows whether the primary model or a fallback produced a run; in fake mode it reads `fake ×30`.
 
 The JSON carries the same numbers plus one entry per case:
 
@@ -154,12 +154,12 @@ The JSON carries the same numbers plus one entry per case:
 | `run_at`, `tier`, `app_url` | When, which tier (`deterministic` or `judge`), and which app the run hit.                                |
 | `model`, `fake_llm`         | Copied from `/api/health` so a report says what it measured.                                             |
 | `cases[]`                   | `id`, `category`, `endpoint`, `outcome`, `score`, `duration_ms`, and the assertion `message` on failure. |
-| `cases[].outcome`           | `passed`, `failed`, `rate_limited`, or `skipped`. Rate-limited cases are reported, not scored.           |
+| `cases[].outcome`           | `passed`, `failed`, `rate_limited`, `unavailable`, or `skipped`. Only the first two are scored.          |
 | `cases[].score`             | `1.0` or `0.0` on the deterministic tier; the correctness score on the judge tier.                       |
 | `cases[].scores`            | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                          |
-| `categories`, `totals`      | Per-category and overall counts: `passed`, `failed`, `rate_limited`, `skipped`, `scored`, `pass_rate`.   |
+| `categories`, `totals`      | Per-category and overall counts per outcome, plus `scored` and `pass_rate`.                              |
 
-The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost.
+The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost. Two saved reports can be compared directly: `python3 evals/report.py <previous.json> <current.json>` prints the same summary and delta for any pair, and `examples/` holds the pair the top-level README walks through.
 
 ## Validation
 

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-OUTCOMES = ("passed", "failed", "rate_limited", "skipped")
+OUTCOMES = ("passed", "failed", "rate_limited", "unavailable", "skipped")
 
 
 @dataclass(frozen=True)
@@ -162,6 +162,7 @@ def format_report(report: dict[str, Any], path: Path) -> list[str]:
         f"tier: {report['tier']} · model: {model} · {totals['total']} cases · "
         f"{totals['passed']} passed, {totals['failed']} failed"
         + (f", {totals['rate_limited']} rate limited" if totals["rate_limited"] else "")
+        + (f", {totals['unavailable']} unavailable" if totals["unavailable"] else "")
         + f" · pass rate {_pct(totals['pass_rate'])}",
     ]
     for cat, s in report["categories"].items():
@@ -204,3 +205,17 @@ def format_delta(delta: dict[str, Any] | None, previous_path: Path | None) -> li
         if c["change"]:
             lines.append(f"  {cat}: {_pct(c['before'])} -> {_pct(c['after'])}{_signed(c['change'])}")
     return lines
+
+
+def compare(previous_path: Path, current_path: Path) -> list[str]:
+    """The report and delta lines for two saved runs, as the harness prints them."""
+    previous, current = load_report(previous_path), load_report(current_path)
+    return format_report(current, current_path) + format_delta(compute_delta(previous, current), previous_path)
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) != 3:
+        sys.exit("usage: report.py <previous.json> <current.json>")
+    print("\n".join(compare(Path(sys.argv[1]), Path(sys.argv[2]))))

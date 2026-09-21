@@ -9,7 +9,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'groundtruth — TaskLoop support agent under test',
+  title: 'groundtruth: TaskLoop support agent under test',
   description:
     'An AI customer-support agent for TaskLoop, instrumented as the system under test for a black-box evaluation harness.',
 };
