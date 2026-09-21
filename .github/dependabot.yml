@@ -7,6 +7,14 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # typescript-eslint does not support the TypeScript 7 compiler yet, and
+      # eslint-config-next's plugins cap their ESLint peer range at 9. Both
+      # were tried and break `pnpm lint`. Remove these when upstream catches up.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
   - package-ecosystem: pip
     directory: /evals
     schedule:
