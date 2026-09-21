@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -113,11 +113,15 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     if not results:
         return
     health = config.stash.get(HEALTH_KEY, {})
-    tier = "judge" if "judge" in (config.option.markexpr or "") and "not judge" not in (config.option.markexpr or "") else "deterministic"
+    tier = (
+        "judge"
+        if "judge" in (config.option.markexpr or "") and "not judge" not in (config.option.markexpr or "")
+        else "deterministic"
+    )
     results_dir = Path(os.environ.get("GROUNDTRUTH_RESULTS_DIR", DEFAULT_RESULTS_DIR))
 
     report = Report(
-        run_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        run_at=datetime.now(UTC).isoformat(timespec="seconds"),
         tier=tier,
         app_url=app_url(),
         model=health.get("model"),

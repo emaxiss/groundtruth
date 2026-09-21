@@ -5,3 +5,19 @@ addopts = "-ra --strict-markers"
 markers = [
   "judge: scored by an LLM judge; noisier and needs a model, excluded from the CI gate with -m 'not judge'",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = [".venv", "results"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["harness"]
+
+[tool.ruff.lint.per-file-ignores]
+# Rubric text and verbatim model phrasings are kept on one line each.
+"harness/judge.py" = ["E501"]
+"tests/test_decline_pattern.py" = ["E501"]
