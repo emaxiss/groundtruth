@@ -207,7 +207,7 @@ export function TriagePanel() {
         )}
 
         {result && refund && (
-          <article className="gt-rise" data-testid="triage-result">
+          <article className="gt-rise" data-testid="triage-result" aria-label="Classification">
             <dl className="grid grid-cols-2 border-t border-l border-line sm:grid-cols-5">
               <div className="border-r border-b border-line px-3 py-2.5">
                 <dt className="gt-label">category</dt>

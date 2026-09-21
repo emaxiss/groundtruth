@@ -87,6 +87,7 @@ export function ChatPanel() {
           <article
             key={i}
             data-testid={m.role === 'user' ? 'msg-user' : 'msg-agent'}
+            aria-label={m.role === 'user' ? 'Customer message' : 'Agent reply'}
             className={`gt-rise border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
               m.role === 'user'
                 ? 'border-line bg-panel text-dim'
