@@ -8,6 +8,7 @@ from pathlib import Path
 from report import (
     CaseResult,
     Report,
+    compare,
     compute_delta,
     format_delta,
     format_report,
@@ -37,6 +38,13 @@ def report(cases: list[CaseResult], tier: str = "deterministic") -> Report:
 
 def as_dict(r: Report) -> dict:
     return json.loads(r.to_json())
+
+
+def test_summary_excludes_unavailable_from_the_pass_rate() -> None:
+    s = summarize([case("a", "edge", "passed"), case("b", "edge", "unavailable")])
+    assert s["unavailable"] == 1
+    assert s["scored"] == 1
+    assert s["pass_rate"] == 1.0
 
 
 def test_summary_excludes_rate_limited_from_the_pass_rate() -> None:
@@ -131,3 +139,14 @@ def test_served_models_counts_most_frequent_first() -> None:
     ]
     assert served_models(cases) == {"b": 2, "a": 1}
     assert served_models([{"served_model": None}]) == {}
+
+
+def test_readme_example_matches_saved_pair() -> None:
+    """The worked example in the README is the output of `report.py` on the checked-in pair."""
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    marker = "$ python3 evals/report.py evals/examples/baseline.json evals/examples/regression.json\n"
+    start = readme.index(marker) + len(marker)
+    printed = readme[start : readme.index("```", start)]
+    expected = compare(Path("evals/examples/baseline.json"), Path("evals/examples/regression.json"))
+    assert printed == "\n".join(expected) + "\n"

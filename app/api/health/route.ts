@@ -13,8 +13,8 @@ export function GET() {
     model: isFakeMode() ? 'fake' : model,
     corpus_docs: stats.docs,
     grounding_tokens: stats.approxTokens,
-    // Says out loud whether this process can spend money, so a run does not
-    // have to be trusted to have been configured correctly.
+    // Reports whether this process can spend money, so the harness can check
+    // the configuration instead of assuming it.
     paid_models_allowed: paidModelsAllowed(),
     all_models_free: isFakeMode() ? true : routing.length > 0 && routing.every(isFreeModel),
   });

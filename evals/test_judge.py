@@ -7,7 +7,6 @@ against the judge in use; see evals/README.md for how and DECISIONS.md for why.
 
 from __future__ import annotations
 
-import time
 from typing import Any
 
 import httpx
@@ -18,7 +17,7 @@ from deepeval.test_case import LLMTestCase
 
 from conftest import DATASET
 from judge import JudgeConfig, OpenRouterJudge, correctness_metric, load_goldens, relevancy_metric
-from test_deterministic import DELAY_S, DISCLAIMER, RateLimited, normalize
+from test_deterministic import DISCLAIMER, normalize, post_json
 
 pytestmark = pytest.mark.judge
 
@@ -37,11 +36,7 @@ def strip_disclaimer(answer: str) -> str:
 
 @pytest.mark.parametrize("golden", dataset.goldens, ids=[g.additional_metadata["id"] for g in dataset.goldens])
 def test_judged(client: httpx.Client, judge: OpenRouterJudge, golden: Golden, record_property: Any) -> None:
-    if DELAY_S:
-        time.sleep(DELAY_S)
-    res = client.post("/api/chat", json={"message": golden.input})
-    if res.status_code == 429:
-        raise RateLimited(f"{golden.additional_metadata['id']}: provider rate limited ({res.text[:200]})")
+    res = post_json(client, "chat", {"message": golden.input}, golden.additional_metadata["id"])
     assert res.status_code == 200, f"status {res.status_code}: {res.text[:300]}"
     record_property("served_model", res.headers.get("x-groundtruth-model"))
 
