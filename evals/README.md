@@ -1,6 +1,24 @@
 # Evals
 
-The golden dataset for the TaskLoop support agent. The harness that runs it lives alongside this file; the dataset is the contract it enforces.
+The golden dataset for the TaskLoop support agent and the harness that runs it. The dataset is the contract the harness enforces.
+
+```
+dataset.jsonl     Thirty golden cases, one JSON object per line
+harness/          The harness as a package
+  dataset.py      Case dataclass and loader
+  http.py         POST helper: throttles and provider outages become outcomes, not failures
+  contract.py     Disclaimer, model header, and triage enums the app must honour
+  text.py         Typographic normalisation applied before any regex
+  report.py       Run report and delta arithmetic, pure functions, plus a compare command
+  reporting.py    pytest plugin: one outcome per case, report written at session end
+  judge.py        DeepEval judge model, metrics, rubric, and goldens loader
+suites/           test_deterministic.py (CI gate) and test_judge.py (-m judge)
+tests/            Unit tests for the harness itself, no app needed
+tools/            validate_dataset.py, judge_spread.py
+examples/         Baseline and regression run pair used in the top-level README
+results/          Run reports, gitignored
+conftest.py       Telemetry opt-out, app client fixture, case parametrisation
+```
 
 ## Dataset
 
@@ -82,7 +100,7 @@ GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm ev
 
 DeepEval reads `.env` and then `.env.local` from the working directory into the process environment without overriding variables that are already set, so a `.env.local` that runs the app also configures the judge (`GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_JUDGE_MODEL`, `GROUNDTRUTH_JUDGE_FALLBACK_MODELS`). Set `DEEPEVAL_DISABLE_DOTENV=1` to make the harness read only the process environment.
 
-Two metrics per case, both in `evals/judge.py`:
+Two metrics per case, both in `harness/judge.py`:
 
 | Metric      | DeepEval class          | Inputs                                | What it scores                                            |
 | ----------- | ----------------------- | ------------------------------------- | --------------------------------------------------------- |
@@ -95,7 +113,7 @@ The judge model is `OpenRouterJudge`, a `DeepEvalBaseLLM` subclass: JSON mode on
 
 ### Thresholds and how they were set
 
-Three consecutive runs on 2026-09-21 with the judge `nex-agi/nex-n2.5-pro:free` and the agent served by `nvidia/nemotron-3-super-120b-a12b:free` (`python3 evals/judge_spread.py --runs 3`). Cases with `n` below 3 hit an upstream 502 from the agent's provider in one run and were recorded as failed at the HTTP layer, so the judge never scored them:
+Three consecutive runs on 2026-09-21 with the judge `nex-agi/nex-n2.5-pro:free` and the agent served by `nvidia/nemotron-3-super-120b-a12b:free` (`python3 evals/tools/judge_spread.py --runs 3`). Cases with `n` below 3 hit an upstream 502 from the agent's provider in one run and were recorded as failed at the HTTP layer, so the judge never scored them:
 
 ```
 case          relevancy min/mean/max     correctness min/mean/max   n
@@ -118,7 +136,7 @@ Re-run the calibration whenever the judge model changes:
 
 ```bash
 pnpm evals:judge   # three times
-python3 evals/judge_spread.py --runs 3
+python3 evals/tools/judge_spread.py --runs 3
 ```
 
 `judge_spread.py` prints min / mean / max per case and metric across the last N judge reports and the lowest score seen anywhere. Override the thresholds with `GROUNDTRUTH_JUDGE_RELEVANCY_MIN` and `GROUNDTRUTH_JUDGE_CORRECTNESS_MIN`.
@@ -159,7 +177,7 @@ The JSON carries the same numbers plus one entry per case:
 | `cases[].scores`            | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                          |
 | `categories`, `totals`      | Per-category and overall counts per outcome, plus `scored` and `pass_rate`.                              |
 
-The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost. Two saved reports can be compared directly: `python3 evals/report.py <previous.json> <current.json>` prints the same summary and delta for any pair, and `examples/` holds the pair the top-level README walks through.
+The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost. Two saved reports can be compared directly: `python3 evals/harness/report.py <previous.json> <current.json>` prints the same summary and delta for any pair, and `examples/` holds the pair the top-level README walks through.
 
 ## Validation
 
