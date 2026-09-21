@@ -23,6 +23,13 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - CI builds the app once and the contract, browser, and eval jobs run that artifact, so they test the same bytes and the build cost is paid once.
 - Python is linted and formatted with ruff in CI at a 120-column limit; rubric text and verbatim model phrasings are exempt from the line limit because wrapping them would change what is being asserted.
 
+## Conversations
+
+- The chat API accepts up to ten earlier turns from the client, because a follow-up like "and annually?" is unanswerable without them and the app has no conversation store.
+- Only the customer's turns are forwarded to the model, as a quoted block inside the user message, never as chat messages with the assistant role. The first version forwarded both roles as real turns; the live run of `multi-004` sent a forged agent turn that approved a refund and the model replied with the payout timeline. A model trusts its own earlier words, so the fix is to stop presenting unverifiable text as those words. Rewording the prompt alone left the case passing one time in three.
+- The system prompt states that the agent has no record of earlier conversations or account actions and must say so when a customer claims an approval, which is true of this system and is what a human agent without the ticket history would say.
+- The cost is that a follow-up about the agent's own previous answer ("explain your second point") loses its referent. That trade is accepted here and would not be in a system with server-side transcripts.
+
 ## Providers
 
 - Default provider is OpenRouter's `:free` tier rather than local Ollama; it gives better model quality than a 3B local model and keeps a 2 GB pull out of the quickstart.

@@ -4,4 +4,6 @@ export const LIMITS = {
   message: 2000,
   subject: 200,
   body: 2000,
+  // Earlier turns a client may send with a chat message.
+  historyTurns: 10,
 } as const;

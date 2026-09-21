@@ -2,12 +2,28 @@ import { z } from 'zod';
 
 import { LIMITS } from './limits';
 
+// One earlier turn of the conversation. The client sends these, so they are
+// as untrusted as the message itself, including the turns labelled `agent`.
+export const ChatTurn = z.object({
+  role: z.enum(['customer', 'agent']),
+  text: z
+    .string()
+    .trim()
+    .min(1, 'Turn cannot be empty')
+    .max(LIMITS.message * 2, 'Turn is too long'),
+});
+export type ChatTurn = z.infer<typeof ChatTurn>;
+
 export const ChatInput = z.object({
   message: z
     .string()
     .trim()
     .min(1, 'Message cannot be empty')
     .max(LIMITS.message, `Message must be ${LIMITS.message} characters or fewer`),
+  history: z
+    .array(ChatTurn)
+    .max(LIMITS.historyTurns, `History must be ${LIMITS.historyTurns} turns or fewer`)
+    .optional(),
 });
 export type ChatInput = z.infer<typeof ChatInput>;
 

@@ -37,7 +37,14 @@ def post_json(client: httpx.Client, endpoint: str, payload: dict[str, Any], case
     for attempt, backoff in enumerate((*RETRY_BACKOFF_S, None)):
         if DELAY_S:
             time.sleep(DELAY_S)
-        res = client.post(f"/api/{endpoint}", json=payload)
+        try:
+            res = client.post(f"/api/{endpoint}", json=payload)
+        except httpx.TimeoutException as e:
+            # The app gave up waiting on the provider; that is not a wrong answer.
+            if backoff is None:
+                raise ProviderUnavailable(f"{case_id}: no response after {attempt} retries ({e!r})") from e
+            time.sleep(backoff)
+            continue
         if res.status_code == 429:
             # A daily cap does not clear in seconds; report it instead of waiting.
             if backoff is None or "per-day" in res.text or "daily" in res.text:
