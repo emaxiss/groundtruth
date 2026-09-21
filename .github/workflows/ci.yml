@@ -52,13 +52,13 @@ jobs:
       - name: Pack the build
         run: tar -czf build.tgz .next
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: next-build
           path: build.tgz
           retention-days: 1
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: unit-coverage
@@ -91,7 +91,7 @@ jobs:
       - name: Verify the API contract and determinism
         run: pnpm test:contract
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: contract-results
@@ -123,7 +123,7 @@ jobs:
       - name: Run the browser suite
         run: pnpm test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-report
@@ -167,7 +167,7 @@ jobs:
           done
           pnpm redteam --delay 0 -j 4 --no-table
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: redteam-results
@@ -228,7 +228,7 @@ jobs:
           done
           pnpm evals:deterministic --junitxml=evals/results/junit.xml
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: eval-run-report
