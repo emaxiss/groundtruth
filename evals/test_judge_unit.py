@@ -3,63 +3,61 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
+from pydantic import BaseModel
 
-from judge import JudgeConfig, JudgeError, JudgeScores, RateLimited, judge, parse_scores
+from judge import JudgeConfig, JudgeError, OpenRouterJudge, RateLimited, load_goldens
 
-CFG = JudgeConfig(
-    base_url="https://judge.test/v1",
-    api_key="k",
-    model="j/one:free",
-    fallback_models=("j/two:free",),
-    allow_paid=False,
-)
+CFG = JudgeConfig(base_url="https://judge.test/v1", api_key="k", model="j/one:free", fallback_models=("j/two:free",), allow_paid=False)
 
 
-def provider(handler):
-    return httpx.Client(base_url=CFG.base_url, transport=httpx.MockTransport(handler))
+class Verdict(BaseModel):
+    score: int
+    reason: str
+
+
+def judge_with(handler) -> OpenRouterJudge:
+    return OpenRouterJudge(CFG, client=httpx.Client(base_url=CFG.base_url, transport=httpx.MockTransport(handler)))
 
 
 def ok(content: str, model: str = "j/served:free") -> httpx.Response:
     return httpx.Response(200, json={"model": model, "choices": [{"message": {"content": content}}]})
 
 
-def test_scores_come_back_typed_with_the_serving_model() -> None:
+def test_generate_with_a_schema_returns_a_validated_instance() -> None:
     seen = {}
 
     def handler(req: httpx.Request) -> httpx.Response:
         seen["body"] = json.loads(req.content)
         seen["auth"] = req.headers.get("authorization")
-        return ok('{"relevancy": 1, "correctness": 0.7, "rationale": "missing the discount"}')
+        return ok('{"score": 7, "reason": "missing the discount"}')
 
-    s = judge("q", "a", "ref", CFG, client=provider(handler))
-    assert s == JudgeScores(relevancy=1.0, correctness=0.7, rationale="missing the discount", model="j/served:free")
+    j = judge_with(handler)
+    out = j.generate("grade this", schema=Verdict)
+    assert out == Verdict(score=7, reason="missing the discount")
+    assert j.served_model == "j/served:free"
     assert seen["auth"] == "Bearer k"
     assert seen["body"]["models"] == ["j/one:free", "j/two:free"]
     assert seen["body"]["response_format"] == {"type": "json_object"}
     assert seen["body"]["temperature"] == 0
 
 
-def test_a_fenced_json_block_is_still_parsed() -> None:
-    s = parse_scores('```json\n{"relevancy": 0.5, "correctness": 0.3, "rationale": "x"}\n```', "m")
-    assert (s.relevancy, s.correctness) == (0.5, 0.3)
+def test_generate_without_a_schema_returns_raw_text() -> None:
+    assert judge_with(lambda r: ok("plain text")).generate("q") == "plain text"
 
 
-@pytest.mark.parametrize(
-    "content",
-    [
-        "not json at all",
-        '{"relevancy": "high", "correctness": 1}',
-        '{"relevancy": 1.5, "correctness": 1}',
-        '{"correctness": 1}',
-        "[1, 2]",
-    ],
-)
-def test_malformed_scores_are_judge_errors_not_low_scores(content: str) -> None:
-    with pytest.raises(JudgeError):
-        parse_scores(content, "m")
+def test_a_fenced_json_block_still_validates() -> None:
+    out = judge_with(lambda r: ok('```json\n{"score": 3, "reason": "x"}\n```')).generate("q", schema=Verdict)
+    assert out.score == 3
+
+
+@pytest.mark.parametrize("content", ["not json", '{"score": "high"}', '{"reason": "no score"}', "[1, 2]"])
+def test_json_that_does_not_fit_the_schema_is_a_judge_error(content: str) -> None:
+    with pytest.raises(JudgeError, match="does not match Verdict"):
+        judge_with(lambda r: ok(content)).generate("q", schema=Verdict)
 
 
 def test_a_paid_judge_is_refused_before_any_call() -> None:
@@ -71,7 +69,7 @@ def test_a_paid_judge_is_refused_before_any_call() -> None:
 
 
 def test_daily_cap_is_raised_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls = []
+    calls: list = []
     monkeypatch.setattr("judge.time.sleep", lambda s: calls.append(("sleep", s)))
 
     def handler(req: httpx.Request) -> httpx.Response:
@@ -79,25 +77,28 @@ def test_daily_cap_is_raised_immediately(monkeypatch: pytest.MonkeyPatch) -> Non
         return httpx.Response(429, text="Rate limit exceeded: free-models-per-day")
 
     with pytest.raises(RateLimited, match="after 0 retries"):
-        judge("q", "a", "ref", CFG, client=provider(handler))
+        judge_with(handler).generate("q")
     assert calls == ["post"]
 
 
 def test_a_transient_429_is_retried_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    sleeps = []
+    sleeps: list = []
     monkeypatch.setattr("judge.time.sleep", lambda s: sleeps.append(s))
-    responses = iter([httpx.Response(429, text="slow down"), ok('{"relevancy": 1, "correctness": 1, "rationale": ""}')])
-
-    s = judge("q", "a", "ref", CFG, client=provider(lambda req: next(responses)))
-    assert s.correctness == 1.0
+    responses = iter([httpx.Response(429, text="slow down"), ok("ok")])
+    assert judge_with(lambda r: next(responses)).generate("q") == "ok"
     assert sleeps == [5.0]
 
 
 def test_a_200_with_no_choices_is_retried_then_reported(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("judge.time.sleep", lambda s: None)
-
-    def handler(req: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"error": {"message": "capacity"}})
-
     with pytest.raises(JudgeError, match="no choices: capacity"):
-        judge("q", "a", "ref", CFG, client=provider(handler))
+        judge_with(lambda r: httpx.Response(200, json={"error": {"message": "capacity"}})).generate("q")
+
+
+def test_goldens_are_the_chat_cases_with_a_reference() -> None:
+    goldens = load_goldens(Path(__file__).with_name("dataset.jsonl"))
+    ids = [g.additional_metadata["id"] for g in goldens]
+    assert len(goldens) == 9
+    assert all(i.startswith(("factual-", "edge-")) for i in ids)
+    assert all(g.expected_output for g in goldens)
+    assert {g.additional_metadata["category"] for g in goldens} == {"factual", "edge"}

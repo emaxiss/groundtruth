@@ -102,6 +102,7 @@ jobs:
         env:
           GROUNDTRUTH_FAKE_LLM: '1'
           GROUNDTRUTH_APP_URL: http://localhost:3000
+          DEEPEVAL_TELEMETRY_OPT_OUT: '1'
         run: |
           pnpm start &
           for i in $(seq 1 30); do
