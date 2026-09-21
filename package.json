@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "grounding": "node scripts/print-grounding.mts",
     "test:contract": "playwright test --project=contract",
+    "redteam": "PROMPTFOO_DISABLE_TELEMETRY=1 PROMPTFOO_DISABLE_UPDATE=1 pnpm dlx promptfoo@0.123.1 eval -c redteam/promptfooconfig.yaml --no-cache -j 1 -o redteam/results/latest.json",
     "evals:validate": "python3 evals/tools/validate_dataset.py",
     "evals:typecheck": "cd evals && python3 -m mypy",
     "evals:unit": "cd evals && python3 -m pytest tests --cov --cov-report=term",

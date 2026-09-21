@@ -24,6 +24,7 @@ Shipping an LLM feature is easy; knowing whether it still works after a prompt e
 | Run reports with run-over-run delta                                      | Working |
 | Live-model verification                                                  | Working |
 | Eval harness, judge tier (DeepEval)                                      | Working |
+| Adversarial suite (Promptfoo)                                            | Working |
 | Browser suite (Playwright)                                               | Working |
 
 The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one.
@@ -100,7 +101,7 @@ pnpm test:e2e
 
 ## What each layer proves
 
-Six layers, cheapest first.
+Seven layers, cheapest first.
 
 | Layer                                  | Runs against                                            | Proves                                                                                                                                        | Cannot prove                                                      |
 | -------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -110,6 +111,7 @@ Six layers, cheapest first.
 | Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP                    | Thirty-six documented behaviours hold: numbers, refusals, classifications, boundaries.                                                        | Answer quality, or that a passing regex means a good answer.      |
 | Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model                   | Answer relevancy, and correctness against each case's reference on a fixed rubric.                                                            | Anything stable: it is a noisier instrument and is not a CI gate. |
 | Browser suite (`tests/e2e/`)           | Built app, fake mode; Chromium, Firefox, WebKit, mobile | The UI sends what the user typed, renders each answer, and shows every validation and error state., and every view passes axe at WCAG 2.1 AA. | Anything a real model does.                                       |
+| Adversarial suite (`redteam/`)         | Running app, fake or live, Promptfoo over HTTP          | Twenty-four attacks end without a leaked prompt, an unauthorised promise, a claimed action, or invented facts.                                | That a generated or adaptive attacker would fail.                 |
 
 All but the judge tier run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
 
@@ -122,6 +124,8 @@ All but the judge tier run on every pull request with no key and no network. The
 **Judge tier second, not a gate.** Answer quality is scored by [DeepEval](https://github.com/confident-ai/deepeval) metrics: `AnswerRelevancyMetric` on every judged case, and a `GEval` correctness metric against the `reference` each factual case carries, with a four-level rubric fixed in [`evals/harness/judge.py`](evals/harness/judge.py). The judge model is a different family from the agent, driven through a `DeepEvalBaseLLM` subclass that enforces JSON mode and the same free-model rule as the app. Thresholds were set from nine calibration runs, documented in [`evals/README.md`](evals/README.md). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a fully deterministic CI gate and the judge tier is a separate, noisier signal that needs a key.
 
 **Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier and model: new failures, fixed cases, and the rate change per category. The format is documented in [`evals/README.md`](evals/README.md).
+
+**Red team.** [`redteam/promptfooconfig.yaml`](redteam/promptfooconfig.yaml) is a [Promptfoo](https://github.com/promptfoo/promptfoo) suite of 24 attacks over HTTP: instruction override, claimed authority, prompt extraction (verbatim, by translation, by summary), social engineering for refunds and discounts, instructions hidden in pasted content, obfuscation, harmful and out-of-scope requests, another customer's data, actions the agent cannot take, and hallucination bait. Every assertion is a regex or a string check, so a failure is a finding and not a grader's opinion. It runs in CI against the fake model and against the live models on the schedule. Its first live run found that the agent would summarise its own rules when asked not to quote them; the fix was an output guard ([`lib/guardrails.ts`](lib/guardrails.ts)), because a reworded prompt still leaked one time in three.
 
 **Stability and drift.** `GROUNDTRUTH_EVAL_REPEATS` runs each case several times and the report lists the cases that did not hold every time, because a single live pass says little about a sampled system. A scheduled workflow ([`live-evals.yml`](.github/workflows/live-evals.yml)) runs both tiers against the live free-tier models weekly, fails only on scored failures, and keeps the run reports as artifacts. The judge itself is checked against sixteen answers of known quality before its scores are trusted.
 
@@ -158,7 +162,7 @@ The pair was taken when the dataset had thirty cases. One case flipped. `edge-00
 - **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
 - **Conversations are not stored.** The chat API takes earlier turns from the client, and only the customer's turns are forwarded to the model. An agent turn sent by a client cannot be verified, and a forged one promising a refund was honoured by a live model before this rule existed; the `multi-004` case found it. A production system would keep the transcript server-side.
-- **Guardrails are prompt-level.** There is no separate classifier or moderation layer. The adversarial cases measure how far prompt-level defence actually goes, which is a narrower claim than "the agent is safe".
+- **Guardrails are mostly prompt-level.** The one exception is an output guard that replaces an answer describing the agent's own rules. There is no separate classifier or moderation layer. The adversarial cases and the red-team suite measure how far that defence actually goes, which is a narrower claim than "the agent is safe", and twenty-four hand-written attacks are not a generated campaign.
 
 ## Repository layout
 
@@ -170,6 +174,7 @@ lib/                    Domain code with no framework dependency
   llm/                  client (rotation, retries), models (routing, free-model guard), fake fixtures
   corpus/               docs loader and the pinned facts the grounding block is built from
   env.ts                every GROUNDTRUTH_* variable is read here and nowhere else
+  guardrails.ts         output guard against disclosing the agent's own rules
   prompts.ts  schemas.ts  limits.ts
 docs-corpus/            Twelve markdown files the grounding block is compiled from
 scripts/                Developer tools (print the grounding block and its budget)
@@ -177,6 +182,7 @@ tests/                  Every TypeScript test, one folder per layer
   unit/                 Vitest, mirrors lib/ and app/api/
   contract/             Black-box verifier against the built app in fake mode
   e2e/                  Playwright: fixtures.ts, pages/ (page objects), specs/
+redteam/                Promptfoo adversarial suite for the chat endpoint
 evals/                  Python eval harness (its own README)
   dataset.jsonl         The thirty-six golden cases
   harness/              dataset, http, contract, text, report, judge, reporting plugin

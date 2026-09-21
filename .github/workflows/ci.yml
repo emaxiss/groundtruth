@@ -132,6 +132,48 @@ jobs:
             test-results/junit.xml
           retention-days: 7
 
+  redteam:
+    name: redteam (Promptfoo adversarial suite, fake-LLM)
+    needs: app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+      - run: tar -xzf build.tgz
+
+      # In fake mode this proves the config, the provider wiring, and every
+      # assertion still parse and hold; the live run is in live-evals.yml.
+      - name: Run the adversarial suite against the app in fake mode
+        env:
+          GROUNDTRUTH_FAKE_LLM: '1'
+          GROUNDTRUTH_APP_URL: http://localhost:3000
+        run: |
+          pnpm start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 1
+          done
+          pnpm redteam --delay 0 -j 4 --no-table
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: redteam-results
+          path: redteam/results/
+          retention-days: 7
+
   evals:
     name: evals (harness lint, types, coverage; deterministic tier)
     needs: app
