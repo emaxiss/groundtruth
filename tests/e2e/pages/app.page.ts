@@ -2,7 +2,13 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export type View = 'chat' | 'triage';
 
-/** The shell: header, health badge, and the view tabs. */
+/**
+ * The shell: header, health badge, and the view tabs.
+ *
+ * Locator rule for every page object: role or label first, because that is
+ * what a user and a screen reader see. A test id is used only where the UI
+ * offers no accessible handle, such as a bare status text.
+ */
 export class AppPage {
   readonly healthBadge: Locator;
   readonly healthModel: Locator;
@@ -18,11 +24,11 @@ export class AppPage {
 
   async goto(): Promise<void> {
     await this.page.goto('/');
-    await expect(this.page.getByTestId('app-root')).toBeVisible();
+    await expect(this.page.getByRole('heading', { name: 'groundtruth' })).toBeVisible();
   }
 
   tab(view: View): Locator {
-    return this.page.getByTestId(`tab-${view}`);
+    return this.page.getByRole('tab', { name: view });
   }
 
   panel(view: View): Locator {

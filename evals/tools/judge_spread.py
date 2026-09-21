@@ -15,9 +15,10 @@ import argparse
 import json
 import statistics
 from pathlib import Path
+from typing import Any
 
 
-def load_judge_reports(results_dir: Path, runs: int) -> list[dict]:
+def load_judge_reports(results_dir: Path, runs: int) -> list[dict[str, Any]]:
     reports = []
     for path in sorted(results_dir.glob("*.json"), reverse=True):
         try:

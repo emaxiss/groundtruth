@@ -22,16 +22,17 @@ export class TriagePage {
   readonly reply: Locator;
 
   constructor(readonly page: Page) {
-    this.subject = page.getByTestId('triage-subject');
-    this.body = page.getByTestId('triage-body');
-    this.plan = page.getByTestId('triage-plan');
-    this.submit = page.getByTestId('triage-submit');
-    this.empty = page.getByTestId('triage-empty');
-    this.loading = page.getByTestId('triage-loading');
-    this.error = page.getByTestId('triage-error');
+    const panel = page.getByRole('tabpanel', { name: 'triage' });
+    this.subject = panel.getByLabel('subject');
+    this.body = panel.getByLabel('body');
+    this.plan = panel.getByLabel('customer plan');
+    this.submit = panel.getByRole('button', { name: /^classify/i });
+    this.empty = panel.getByText('No classification yet.', { exact: false });
+    this.loading = panel.getByRole('status');
+    this.error = panel.getByRole('alert');
     this.subjectValidation = page.getByTestId('triage-subject-validation');
     this.bodyValidation = page.getByTestId('triage-body-validation');
-    this.result = page.getByTestId('triage-result');
+    this.result = panel.getByRole('article', { name: 'Classification' });
     this.category = page.getByTestId('triage-category');
     this.severity = page.getByTestId('triage-severity');
     this.route = page.getByTestId('triage-route');

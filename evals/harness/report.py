@@ -98,7 +98,8 @@ def previous_report(results_dir: Path, current: Path, tier: str, model: str | No
 
 
 def load_report(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return data
 
 
 def compute_delta(previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
@@ -106,7 +107,7 @@ def compute_delta(previous: dict[str, Any], current: dict[str, Any]) -> dict[str
     curr_cases = {c["id"]: c for c in current["cases"]}
 
     def failing(c: dict[str, Any]) -> bool:
-        return c["outcome"] == "failed"
+        return bool(c["outcome"] == "failed")
 
     common = sorted(set(prev_cases) & set(curr_cases))
     new_failures = [i for i in common if not failing(prev_cases[i]) and failing(curr_cases[i])]

@@ -21,3 +21,24 @@ known-first-party = ["harness"]
 # Rubric text and verbatim model phrasings are kept on one line each.
 "harness/judge.py" = ["E501"]
 "tests/test_decline_pattern.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "."
+files = ["harness", "tools", "conftest.py"]
+strict = true
+warn_unreachable = true
+# DeepEval ships without complete type information.
+[[tool.mypy.overrides]]
+module = ["deepeval.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[tool.coverage.run]
+source = ["harness"]
+# The judge suite needs a live model; its module is covered by mocked-transport tests.
+omit = ["harness/reporting.py"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

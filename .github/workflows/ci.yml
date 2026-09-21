@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   app:
-    name: app (lint, typecheck, test, build)
+    name: app (lint, typecheck, unit coverage, build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,17 +38,36 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit and route tests
-        run: pnpm test
+      # Fails under the thresholds in vitest.config.ts.
+      - name: Unit and route tests with coverage
+        run: pnpm test:coverage
+
+      - name: Verify grounding block is within budget
+        run: pnpm grounding > /dev/null
 
       - name: Build
         run: pnpm build
 
-      - name: Validate eval dataset
-        run: pnpm evals:validate
+      # Built once here; the jobs below run the same artifact.
+      - name: Pack the build
+        run: tar -czf build.tgz .next
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: build.tgz
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-coverage
+          path: coverage/lcov.info
+          retention-days: 7
 
   contract:
-    name: contract (fake-LLM determinism)
+    name: contract (API over HTTP, fake-LLM)
+    needs: app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,25 +80,27 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
 
-      # No API key, no model: fake mode makes the API contract testable in CI.
-      - name: Verify grounding block is within budget
-        run: pnpm grounding > /dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+      - run: tar -xzf build.tgz
 
-      - name: Verify API contract and determinism
-        env:
-          GROUNDTRUTH_FAKE_LLM: '1'
-        run: |
-          pnpm start &
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3000/api/health > /dev/null && break
-            sleep 1
-          done
-          pnpm verify:contract
+      # playwright.config.ts starts the built app in fake mode itself. The
+      # contract project uses the request fixture, so no browser is installed.
+      - name: Verify the API contract and determinism
+        run: pnpm test:contract
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-results
+          path: test-results/junit.xml
+          retention-days: 7
 
   e2e:
-    name: e2e (Playwright, fake-LLM)
+    name: e2e (Chromium, Firefox, WebKit, mobile; axe)
+    needs: app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,22 +113,28 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
 
-      # playwright.config.ts starts the built app in fake mode itself.
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+      - run: tar -xzf build.tgz
+
       - name: Run the browser suite
         run: pnpm test:e2e
 
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: e2e-report
+          path: |
+            playwright-report/
+            test-results/junit.xml
           retention-days: 7
 
   evals:
-    name: evals (deterministic tier, fake-LLM)
+    name: evals (harness lint, types, coverage; deterministic tier)
+    needs: app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,13 +153,25 @@ jobs:
           cache-dependency-path: evals/requirements.txt
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
       - run: pip install -r evals/requirements.txt
 
-      - name: Lint and format-check the harness
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+      - run: tar -xzf build.tgz
+
+      - name: Validate the dataset
+        run: pnpm evals:validate
+
+      - name: Lint, format-check, and type-check the harness
         run: |
           ruff check evals
           ruff format --check evals
+          pnpm evals:typecheck
+
+      # Fails under the floor in evals/pyproject.toml.
+      - name: Harness unit tests with coverage
+        run: pnpm evals:unit
 
       - name: Run the deterministic tier against the app in fake mode
         env:
@@ -145,4 +184,11 @@ jobs:
             curl -sf http://localhost:3000/api/health > /dev/null && break
             sleep 1
           done
-          pnpm evals:deterministic
+          pnpm evals:deterministic --junitxml=evals/results/junit.xml
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-run-report
+          path: evals/results/
+          retention-days: 30

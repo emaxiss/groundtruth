@@ -55,6 +55,7 @@ export function ErrorAlert({
 export function PendingRow({ testId, label }: { testId: string; label: string }) {
   return (
     <div
+      role="status"
       className="flex items-center gap-2 border border-line bg-panel px-4 py-3 text-xs text-dim"
       data-testid={testId}
     >

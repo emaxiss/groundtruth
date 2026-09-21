@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from harness.report import (
     CaseResult,
     Report,
@@ -141,9 +143,10 @@ def test_served_models_counts_most_frequent_first() -> None:
     assert served_models([{"served_model": None}]) == {}
 
 
-def test_readme_example_matches_saved_pair() -> None:
+def test_readme_example_matches_saved_pair(monkeypatch: pytest.MonkeyPatch) -> None:
     """The worked example in the README is the output of `harness/report.py` on the checked-in pair."""
     root = Path(__file__).resolve().parents[2]
+    monkeypatch.chdir(root)  # the README shows repo-relative paths
     readme = (root / "README.md").read_text(encoding="utf-8")
     marker = "$ python3 evals/harness/report.py evals/examples/baseline.json evals/examples/regression.json\n"
     start = readme.index(marker) + len(marker)

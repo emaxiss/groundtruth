@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -36,7 +37,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) -> Generator[None, Any, None]:
     outcome = yield
     rep: pytest.TestReport = outcome.get_result()
     if rep.when != "call" or not hasattr(item, "callspec"):
@@ -59,12 +60,12 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
                 score=None,
                 duration_ms=int(rep.duration * 1000),
                 message=f"judge error: {call.excinfo.value}"[:300],
-                served_model=dict(rep.user_properties).get("served_model"),
+                served_model=_text(dict(rep.user_properties).get("served_model")),
             )
         )
         return
 
-    props = dict(rep.user_properties)
+    props: dict[str, Any] = dict(rep.user_properties)
     recorded = props.get("score")
     if rep.passed:
         result, message = "passed", props.get("rationale")
@@ -96,6 +97,10 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
     )
 
 
+def _text(value: object) -> str | None:
+    return value if isinstance(value, str) else None
+
+
 def _first_line(text: str) -> str | None:
     return text.strip().splitlines()[0][:300] if text.strip() else None
 
@@ -103,7 +108,7 @@ def _first_line(text: str) -> str | None:
 def _failure_message(rep: pytest.TestReport) -> str | None:
     crash = getattr(rep.longrepr, "reprcrash", None)
     if crash is not None and crash.message:
-        return crash.message.splitlines()[0][:300]
+        return str(crash.message).splitlines()[0][:300]
     return _first_line(rep.longreprtext) or "failed"
 
 

@@ -94,7 +94,7 @@ def _strip_fence(text: str) -> str:
     return t.strip()
 
 
-class OpenRouterJudge(DeepEvalBaseLLM):
+class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is untyped
     """An OpenAI-compatible judge for DeepEval metrics, with JSON mode and a free-model guard.
 
     DeepEval's metrics hand `generate()` a Pydantic schema and expect an
