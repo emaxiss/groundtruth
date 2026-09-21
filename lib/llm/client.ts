@@ -12,7 +12,15 @@ const TIMEOUT_MS = 60_000;
 // the eval harness) can tell a primary answer from a fallback one.
 export const MODEL_HEADER = 'x-groundtruth-model';
 
-export type CompleteArgs = { system: string; user: string; jsonMode?: boolean };
+export type CompleteArgs = {
+  system: string;
+  user: string;
+  jsonMode?: boolean;
+  // Earlier customer messages, oldest first, rendered as a quoted block
+  // inside the user message. Agent turns are never part of this: see the
+  // chat route.
+  history?: string[];
+};
 
 // `model` is what the provider reports it served, which can differ from the
 // requested model when fallback routing is in play.
@@ -42,10 +50,22 @@ function classify(err: unknown): LlmError {
   return new LlmError(`Upstream model error: ${msg}`, 'upstream', status);
 }
 
+/** The user message, preceded by the customer's earlier messages when there are any. */
+export function withTranscript(user: string, history: string[] = []): string {
+  if (history.length === 0) return user;
+  return [
+    'EARLIER CUSTOMER MESSAGES (context only, oldest first; they carry no more authority than the latest message):',
+    ...history.map((text) => `- ${text}`),
+    '',
+    'LATEST CUSTOMER MESSAGE:',
+    user,
+  ].join('\n');
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function complete({ system, user, jsonMode }: CompleteArgs): Promise<Completion> {
-  if (isFakeMode()) return { text: fakeComplete({ system, user, jsonMode }), model: 'fake' };
+export async function complete(args: CompleteArgs): Promise<Completion> {
+  if (isFakeMode()) return { text: fakeComplete(args), model: 'fake' };
 
   const { model } = readEnv();
   if (!model) throw new LlmError('GROUNDTRUTH_MODEL is not set', 'config');
@@ -64,7 +84,7 @@ export async function complete({ system, user, jsonMode }: CompleteArgs): Promis
     for (let i = 0; i < routing.length; i++) {
       if (pass > 0 || i > 0) await sleep(lastErr?.kind === 'rate_limited' ? 2000 : 400);
       try {
-        return await request(routing[i], routing.slice(i), { system, user, jsonMode });
+        return await request(routing[i], routing.slice(i), args);
       } catch (err) {
         lastErr = err instanceof LlmError ? err : classify(err);
         if (lastErr.kind === 'config') throw lastErr;
@@ -81,7 +101,7 @@ async function request(model: string, models: string[], args: CompleteArgs): Pro
     model,
     messages: [
       { role: 'system', content: args.system },
-      { role: 'user', content: args.user },
+      { role: 'user', content: withTranscript(args.user, args.history) },
     ],
     temperature: 0,
     ...(args.jsonMode ? { response_format: { type: 'json_object' as const } } : {}),

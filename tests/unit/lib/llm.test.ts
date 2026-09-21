@@ -147,6 +147,26 @@ describe('assertModelsAllowed', () => {
   });
 });
 
+describe('history', () => {
+  it('quotes earlier customer messages inside the user message', async () => {
+    await complete({ system: 's', user: 'And annually?', history: ['What does Pro cost?'] });
+
+    const messages = create.mock.calls[0][0].messages as Array<{ role: string; content: string }>;
+    expect(messages.map((m) => m.role)).toEqual(['system', 'user']);
+    expect(messages[1].content).toContain('EARLIER CUSTOMER MESSAGES');
+    expect(messages[1].content).toContain('- What does Pro cost?');
+    expect(messages[1].content.endsWith('LATEST CUSTOMER MESSAGE:\nAnd annually?')).toBe(true);
+  });
+
+  it('sends the message untouched when there is no history', async () => {
+    await complete({ system: 's', user: 'What does Pro cost?' });
+    expect(create.mock.calls[0][0].messages[1]).toEqual({
+      role: 'user',
+      content: 'What does Pro cost?',
+    });
+  });
+});
+
 describe('rotation', () => {
   const overloaded = { error: { message: 'Service temporarily overloaded' } };
   const answer = { model: 'third:free', choices: [{ message: { content: 'ok' } }] };

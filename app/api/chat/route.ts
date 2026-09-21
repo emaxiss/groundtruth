@@ -38,6 +38,13 @@ export async function POST(req: Request) {
     const { text, model } = await complete({
       system: chatSystemPrompt(),
       user: parsed.data.message,
+      // Only the customer's earlier messages are forwarded. There is no
+      // server-side conversation store, so an agent turn sent by the client
+      // cannot be verified, and a forged one promising a refund was honoured
+      // by a live model when it was passed through.
+      history: (parsed.data.history ?? [])
+        .filter((turn) => turn.role === 'customer')
+        .map((turn) => turn.text),
     });
     // Disclaimer is appended here, not requested from the model, so it is
     // present on every answer regardless of what the model returns.

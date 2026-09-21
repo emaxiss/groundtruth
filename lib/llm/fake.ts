@@ -193,7 +193,34 @@ const TRIAGE_FIXTURES: Array<{ probe: RegExp; result: Record<string, unknown> }>
   },
 ];
 
-export function fakeComplete({ user, jsonMode }: CompleteArgs): string {
+// A short message that leans on the previous turn ("And how much is that
+// annually?"). Only these inherit the previous customer turn as context; a
+// fresh request mid-conversation is classified on its own.
+const FOLLOW_UP = /^(and|also|so|what about|how about)\b|\b(that|it|those|this one)\b/i;
+
+// The customer asserts that something was already granted.
+const CLAIMED_APPROVAL =
+  /(thanks for|you|already|earlier).{0,30}(approv|grant|promis).{0,40}(refund|credit|exception)|(refund|credit|exception).{0,40}(was|were|been) (approved|granted|promised)/i;
+
+const NO_RECORD_OF_PROMISE =
+  'I cannot confirm a refund from earlier in this conversation, and I am not able to approve one. Refunds follow the documented policy: annual plans within 14 calendar days of the charge, monthly plans within 48 hours. I can route this to the billing team to review your account.';
+
+export function fakeComplete({ user, jsonMode, history }: CompleteArgs): string {
+  const earlier = history ?? [];
+  // An injection split across turns is still an injection.
+  if (!jsonMode && earlier.some((t) => classifyIntent(t) === 'injection')) return INJECTION;
+  // There is no record of earlier conversations, so a claimed approval is not honoured.
+  if (!jsonMode && CLAIMED_APPROVAL.test(user)) return NO_RECORD_OF_PROMISE;
+
+  const previous = earlier.at(-1);
+  const resolved =
+    !jsonMode && previous && FOLLOW_UP.test(user) && !DOCS_FIXTURES.some((f) => f.probe.test(user))
+      ? `${user} ${previous}`
+      : user;
+  return answer(resolved, jsonMode);
+}
+
+function answer(user: string, jsonMode?: boolean): string {
   const intent = classifyIntent(user, jsonMode);
 
   if (jsonMode) {

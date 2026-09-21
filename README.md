@@ -19,7 +19,7 @@ Shipping an LLM feature is easy; knowing whether it still works after a prompt e
 | Unit tests (Vitest)                                                      | Working |
 | CI: one build shared by contract, e2e, and evals; coverage floors; JUnit | Working |
 | Ticket triage (structured output)                                        | Working |
-| Golden dataset (30 cases)                                                | Working |
+| Golden dataset (36 cases)                                                | Working |
 | Eval harness, deterministic tier                                         | Working |
 | Run reports with run-over-run delta                                      | Working |
 | Live-model verification                                                  | Working |
@@ -107,7 +107,7 @@ Six layers, cheapest first.
 | Unit tests (Vitest, `lib/`)            | Pure functions                                          | The corpus budget, schemas, prompt assembly, fake fixtures, and the client's error mapping.                                                   | Anything about HTTP, routing, or a real model.                    |
 | Route tests (Vitest, `app/api/`)       | Handlers, model mocked                                  | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400.                                                | That the app boots, or that the fake model and the mock agree.    |
 | Contract suite (`tests/contract/`)     | Built app, fake mode, Playwright request fixture        | The deployed API honours its contract and is byte-identical across runs.                                                                      | Anything a real model does.                                       |
-| Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP                    | Thirty documented behaviours hold: numbers, refusals, classifications, boundaries.                                                            | Answer quality, or that a passing regex means a good answer.      |
+| Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP                    | Thirty-six documented behaviours hold: numbers, refusals, classifications, boundaries.                                                        | Answer quality, or that a passing regex means a good answer.      |
 | Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model                   | Answer relevancy, and correctness against each case's reference on a fixed rubric.                                                            | Anything stable: it is a noisier instrument and is not a CI gate. |
 | Browser suite (`tests/e2e/`)           | Built app, fake mode; Chromium, Firefox, WebKit, mobile | The UI sends what the user typed, renders each answer, and shows every validation and error state., and every view passes axe at WCAG 2.1 AA. | Anything a real model does.                                       |
 
@@ -115,7 +115,7 @@ All but the judge tier run on every pull request with no key and no network. The
 
 ## Eval design
 
-**Dataset taxonomy.** Thirty golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), and `edge` (boundary cases: a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
+**Dataset taxonomy.** Thirty-six golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), `multi_turn` (follow-ups that depend on an earlier turn, an injection split across turns, a customer claiming an approval that never happened), and `edge` (boundary cases: a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
 
 **Deterministic first.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and deterministic for a given response. These are hard failures with no threshold to tune. Assertion text is normalised for typographic whitespace and dashes first, because a model that writes "7 days" with a narrow no-break space has not got the fact wrong.
 
@@ -146,7 +146,7 @@ delta vs baseline.json:
   edge: 100.0% -> 83.3% (-16.7)
 ```
 
-One case flipped. `edge-002`, a customer 15 days after purchase, was told they still qualified; its pair `edge-001`, at day 14, kept passing. Boundary cases come in pairs so that a window edit shows up as a delta on one side. The `served by:` line differs between the runs because the client rotates through its routing list when a free model is overloaded. A unit test checks that the block above is the output of the command on the checked-in files.
+The pair was taken when the dataset had thirty cases. One case flipped. `edge-002`, a customer 15 days after purchase, was told they still qualified; its pair `edge-001`, at day 14, kept passing. Boundary cases come in pairs so that a window edit shows up as a delta on one side. The `served by:` line differs between the runs because the client rotates through its routing list when a free model is overloaded. A unit test checks that the block above is the output of the command on the checked-in files.
 
 **Retrieval.** Retrieval is not implemented; the grounding block is a curated fact list compiled from `docs-corpus/`. If retrieval is added, the retrieved chunks are the context a faithfulness metric needs, and that metric attaches to the existing cases without the dataset changing.
 
@@ -157,6 +157,7 @@ One case flipped. `edge-002`, a customer 15 days after purchase, was told they s
 - **Free-tier providers are unreliable as well as rate limited.** Upstream capacity errors arrive as a 200 with no completion in it, and the shared free pool for a given model is often saturated. The client rotates through its routing list itself, two passes, because provider-side routing does not step in on those errors; a case where every model fails is recorded as `unavailable`, not as a failed case. A live run reports which model actually served each case for the same reason.
 - **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
 - **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
+- **Conversations are not stored.** The chat API takes earlier turns from the client, and only the customer's turns are forwarded to the model. An agent turn sent by a client cannot be verified, and a forged one promising a refund was honoured by a live model before this rule existed; the `multi-004` case found it. A production system would keep the transcript server-side.
 - **Guardrails are prompt-level.** There is no separate classifier or moderation layer. The adversarial cases measure how far prompt-level defence actually goes, which is a narrower claim than "the agent is safe".
 
 ## Repository layout
@@ -177,7 +178,7 @@ tests/                  Every TypeScript test, one folder per layer
   contract/             Black-box verifier against the built app in fake mode
   e2e/                  Playwright: fixtures.ts, pages/ (page objects), specs/
 evals/                  Python eval harness (its own README)
-  dataset.jsonl         The thirty golden cases
+  dataset.jsonl         The thirty-six golden cases
   harness/              dataset, http, contract, text, report, judge, reporting plugin
   suites/               The deterministic and judge tiers
   tests/                Unit tests for the harness itself

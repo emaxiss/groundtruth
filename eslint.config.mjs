@@ -72,7 +72,16 @@ const eslintConfig = defineConfig([
   // Must stay last: turns off every rule that conflicts with Prettier.
   prettier,
 
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'coverage/**']),
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    'coverage/**',
+    'evals/**',
+    'playwright-report/**',
+    'test-results/**',
+  ]),
 ]);
 
 export default eslintConfig;
