@@ -3,7 +3,7 @@
 The golden dataset for the TaskLoop support agent and the harness that runs it. The dataset is the contract the harness enforces.
 
 ```
-dataset.jsonl     Thirty golden cases, one JSON object per line
+dataset.jsonl     Thirty-six golden cases, one JSON object per line
 harness/          The harness as a package
   dataset.py      Case dataclass and loader
   http.py         POST helper: throttles and provider outages become outcomes, not failures
@@ -23,7 +23,7 @@ conftest.py       Telemetry opt-out, app client fixture, case parametrisation
 
 ## Dataset
 
-`dataset.jsonl` holds 30 cases, one JSON object per line, six per category:
+`dataset.jsonl` holds 36 cases, one JSON object per line, six per category:
 
 | Category       | What it catches                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------ |
@@ -31,6 +31,7 @@ conftest.py       Telemetry opt-out, app client fixture, case parametrisation
 | `triage`       | Structured classification holds: category, routing, severity, and refund eligibility.      |
 | `out_of_scope` | Requests outside TaskLoop are declined in full, with no partial compliance.                |
 | `adversarial`  | Prompt injection, prompt extraction, claimed authority, and social-engineered refunds.     |
+| `multi_turn`   | Follow-ups resolved against history, split injections, and claimed approvals.              |
 | `edge`         | Policy boundaries (day 14 vs 15, hour 48 vs 49) and input limits (near-empty, 2000 chars). |
 
 Every case documents why it exists in its `why` field.
@@ -53,19 +54,20 @@ Every case documents why it exists in its `why` field.
 }
 ```
 
-| Field                      | Applies to | Meaning                                                                                       |
-| -------------------------- | ---------- | --------------------------------------------------------------------------------------------- |
-| `endpoint`                 | all        | `chat` posts `input` to `/api/chat`; `triage` posts it to `/api/triage`.                      |
-| `expected.status`          | all        | Always 200. Error-path behaviour is covered by the route tests, not the dataset.              |
-| `expected.must_match`      | all        | Regexes (case-insensitive) that must each match the answer or the suggested reply.            |
-| `expected.must_not_match`  | all        | Regexes that must not match anywhere in the answer or the suggested reply.                    |
-| `expected.schema`          | triage     | The response must parse as `TriageOutput` from `lib/schemas.ts`.                              |
-| `expected.category`        | triage     | Required classification. A list means any listed value passes.                                |
-| `expected.route_to`        | triage     | Required routing. A list means any listed value passes.                                       |
-| `expected.severity`        | triage     | Required severity when the case pins it. A list means any listed value passes.                |
-| `expected.refund_eligible` | triage     | `true`, `false`, or `"needs_review"`, applied strictly.                                       |
-| `reference`                | chat       | The answer a judge scores against. Required on `factual`, present on `edge` where it matters. |
-| `why`                      | all        | One line on the failure mode this case exists to catch.                                       |
+| Field                      | Applies to | Meaning                                                                                            |
+| -------------------------- | ---------- | -------------------------------------------------------------------------------------------------- |
+| `input.history`            | multi_turn | Earlier turns as `{role: customer or agent, text}`; required on `multi_turn`, forbidden elsewhere. |
+| `endpoint`                 | all        | `chat` posts `input` to `/api/chat`; `triage` posts it to `/api/triage`.                           |
+| `expected.status`          | all        | Always 200. Error-path behaviour is covered by the route tests, not the dataset.                   |
+| `expected.must_match`      | all        | Regexes (case-insensitive) that must each match the answer or the suggested reply.                 |
+| `expected.must_not_match`  | all        | Regexes that must not match anywhere in the answer or the suggested reply.                         |
+| `expected.schema`          | triage     | The response must parse as `TriageOutput` from `lib/schemas.ts`.                                   |
+| `expected.category`        | triage     | Required classification. A list means any listed value passes.                                     |
+| `expected.route_to`        | triage     | Required routing. A list means any listed value passes.                                            |
+| `expected.severity`        | triage     | Required severity when the case pins it. A list means any listed value passes.                     |
+| `expected.refund_eligible` | triage     | `true`, `false`, or `"needs_review"`, applied strictly.                                            |
+| `reference`                | chat       | The answer a judge scores against. Required on `factual`, present on `edge` where it matters.      |
+| `why`                      | all        | One line on the failure mode this case exists to catch.                                            |
 
 Two invariants apply to every case and are not repeated per line: chat answers must carry the server-side disclaimer, and triage responses must validate against the schema before any field assertion runs.
 
@@ -85,7 +87,7 @@ pnpm evals:deterministic                   # pytest evals -m "not judge"
 
 `GROUNDTRUTH_APP_URL` overrides the default `http://localhost:3000`. The client checks `/api/health` before the first case and exits with a clear message if the app is not up, or if the app is configured with a model that would be billed.
 
-Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; `3500` keeps a run under the free tier's per-minute ceiling. A 429 is retried with backoff (or the `Retry-After` value) up to three times, then raised as `RateLimited`, a distinct outcome from a failed assertion. A daily-cap 429 is raised immediately since waiting would not clear it. A 502, 503, or 504 (every model in the app's routing list failed upstream or timed out) is retried the same way, then raised as `ProviderUnavailable` and recorded as `unavailable`.
+Against a live provider, set `GROUNDTRUTH_EVAL_DELAY_MS` to space the requests; `3500` keeps a run under the free tier's per-minute ceiling. A 429 is retried with backoff (or the `Retry-After` value) up to three times, then raised as `RateLimited`, a distinct outcome from a failed assertion. A daily-cap 429 is raised immediately since waiting would not clear it. A client read timeout, or a 502, 503, or 504 (every model in the app's routing list failed upstream or timed out) is retried the same way, then raised as `ProviderUnavailable` and recorded as `unavailable`.
 
 ```bash
 GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm evals:deterministic

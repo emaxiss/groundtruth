@@ -43,7 +43,13 @@ export function ChatPanel() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message }),
+        // Earlier turns go with the message so a follow-up has its context.
+        body: JSON.stringify({
+          message,
+          history: msgs
+            .slice(-LIMITS.historyTurns)
+            .map((m) => ({ role: m.role === 'user' ? 'customer' : 'agent', text: m.text })),
+        }),
       });
       const body: unknown = await res.json();
       if (!res.ok) {

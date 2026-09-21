@@ -108,3 +108,19 @@ def test_the_pacing_delay_runs_before_every_attempt(monkeypatch: pytest.MonkeyPa
     post_json(client, "chat", {}, "factual-001")
 
     assert recorded == [3.5]
+
+
+def test_a_read_timeout_is_retried_then_reported_as_unavailable(sleeps: list[float]) -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = httpx.Client(base_url="http://app.test", transport=httpx.MockTransport(handler))
+
+    with pytest.raises(ProviderUnavailable, match="no response after 3 retries"):
+        post_json(client, "chat", {}, "multi-005")
+    assert calls == 4
+    assert sleeps == [5.0, 15.0, 30.0]

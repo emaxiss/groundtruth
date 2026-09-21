@@ -16,8 +16,9 @@ from typing import Any
 
 DATASET = Path(__file__).resolve().parents[1] / "dataset.jsonl"
 
-EXPECTED_TOTAL = 30
-CATEGORIES = {"factual", "triage", "out_of_scope", "adversarial", "edge"}
+EXPECTED_TOTAL = 36
+CATEGORIES = {"factual", "triage", "out_of_scope", "adversarial", "edge", "multi_turn"}
+MAX_HISTORY_TURNS = 10
 PER_CATEGORY = EXPECTED_TOTAL // len(CATEGORIES)
 ID_PREFIX = {
     "factual": "factual-",
@@ -25,6 +26,7 @@ ID_PREFIX = {
     "out_of_scope": "scope-",
     "adversarial": "adv-",
     "edge": "edge-",
+    "multi_turn": "multi-",
 }
 ENDPOINTS = {"chat", "triage"}
 CUSTOMER_PLANS = {"free", "pro", "team"}
@@ -52,6 +54,18 @@ EXPECTED_KEYS = {
 }
 
 
+def history_problems(history: Any, where: str) -> list[str]:
+    if not isinstance(history, list) or not 1 <= len(history) <= MAX_HISTORY_TURNS:
+        return [f"{where}: history must be a list of 1..{MAX_HISTORY_TURNS} turns"]
+    errs = []
+    for n, turn in enumerate(history, 1):
+        if not isinstance(turn, dict) or set(turn) != {"role", "text"}:
+            errs.append(f"{where}: history turn {n} must be exactly {{'role', 'text'}}")
+        elif turn["role"] not in ("customer", "agent") or not str(turn["text"]).strip():
+            errs.append(f"{where}: history turn {n} needs role customer|agent and non-empty text")
+    return errs
+
+
 def problems_for(case: dict[str, Any], line_no: int) -> list[str]:
     errs: list[str] = []
     where = f"line {line_no} ({case.get('id', '?')})"
@@ -77,9 +91,13 @@ def problems_for(case: dict[str, Any], line_no: int) -> list[str]:
 
     if endpoint == "chat":
         msg = inp.get("message")
-        if set(inp) != {"message"} or not isinstance(msg, str):
-            errs.append(f"{where}: chat input must be exactly {{'message': str}}")
-        elif not msg.strip() or len(msg) > MAX_MESSAGE:
+        if not set(inp) <= {"message", "history"} or not isinstance(msg, str):
+            errs.append(f"{where}: chat input must be {{'message': str}} with an optional 'history'")
+        elif (cat == "multi_turn") != ("history" in inp):
+            errs.append(f"{where}: 'history' belongs on multi_turn cases and only there")
+        elif "history" in inp:
+            errs.extend(history_problems(inp["history"], where))
+        if isinstance(msg, str) and (not msg.strip() or len(msg) > MAX_MESSAGE):
             errs.append(f"{where}: message must be 1..{MAX_MESSAGE} characters, got {len(msg)}")
         if "schema" in exp or any(k in exp for k in TRIAGE_ENUMS) or "refund_eligible" in exp:
             errs.append(f"{where}: chat cases cannot carry triage field assertions")
