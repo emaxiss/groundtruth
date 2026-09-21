@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = Number(process.env.GROUNDTRUTH_E2E_PORT ?? 3114);
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

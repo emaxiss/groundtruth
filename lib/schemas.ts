@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
+import { LIMITS } from './limits';
+
 export const ChatInput = z.object({
   message: z
     .string()
     .trim()
     .min(1, 'Message cannot be empty')
-    .max(2000, 'Message must be 2000 characters or fewer'),
+    .max(LIMITS.message, `Message must be ${LIMITS.message} characters or fewer`),
 });
 export type ChatInput = z.infer<typeof ChatInput>;
 
@@ -16,12 +18,12 @@ export const TriageInput = z.object({
     .string()
     .trim()
     .min(1, 'Subject cannot be empty')
-    .max(200, 'Subject must be 200 characters or fewer'),
+    .max(LIMITS.subject, `Subject must be ${LIMITS.subject} characters or fewer`),
   body: z
     .string()
     .trim()
     .min(1, 'Body cannot be empty')
-    .max(2000, 'Body must be 2000 characters or fewer'),
+    .max(LIMITS.body, `Body must be ${LIMITS.body} characters or fewer`),
   customer_plan: z.enum(CUSTOMER_PLANS),
 });
 export type TriageInput = z.infer<typeof TriageInput>;

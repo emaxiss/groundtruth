@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
   // Type-aware rules. These need the TypeScript program, so they only apply to
   // source files; config and script files are linted without type information.
   {
-    files: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}'],
+    files: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'tests/**/*.ts'],
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
@@ -42,6 +42,7 @@ const eslintConfig = defineConfig([
   {
     files: ['**/*.{ts,tsx,mjs}'],
     plugins: { 'import-x': importX },
+    settings: { 'import-x/internal-regex': '^@/' },
     rules: {
       'import-x/order': [
         'error',
@@ -60,7 +61,7 @@ const eslintConfig = defineConfig([
   // Test files assert on deliberately malformed input, so the unsafe-* rules
   // fight the tests rather than protect them.
   {
-    files: ['**/*.test.ts'],
+    files: ['tests/unit/**/*.test.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',

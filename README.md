@@ -46,9 +46,9 @@ The agent runs today, the deterministic tier of the harness gates every pull req
    │                                              │
    │  /api/chat    /api/triage    /api/health     │
    │       │                                      │
-   │  lib/llm.ts ──── GROUNDTRUTH_FAKE_LLM=1 ──┐  │
+   │  lib/llm/ ─────── GROUNDTRUTH_FAKE_LLM=1 ──┐  │
    │       │                                   │  │
-   │  lib/corpus.ts ← docs-corpus/*.md    fixtures│
+   │  lib/corpus/ ← docs-corpus/*.md      fixtures│
    └───────┼──────────────────────────────────────┘
            │ OpenAI-compatible
            ▼
@@ -90,7 +90,7 @@ GROUNDTRUTH_API_KEY=ollama
 
 ### Running without a model
 
-`GROUNDTRUTH_FAKE_LLM=1` makes `lib/llm.ts` return canned responses from a fixture map keyed by intent. The API and UI behave identically; responses are byte-identical across runs. This exists so the contract verifier and the eval harness can assert on exact output without a live model, and it is what CI runs:
+`GROUNDTRUTH_FAKE_LLM=1` makes the LLM client return canned responses from a fixture map keyed by intent. The API and UI behave identically; responses are byte-identical across runs. This exists so the contract verifier and the eval harness can assert on exact output without a live model, and it is what CI runs:
 
 ```bash
 pnpm build
@@ -106,10 +106,10 @@ Six layers, cheapest first.
 | -------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | Unit tests (Vitest, `lib/`)            | Pure functions                        | The corpus budget, schemas, prompt assembly, fake fixtures, and the client's error mapping.        | Anything about HTTP, routing, or a real model.                    |
 | Route tests (Vitest, `app/api/`)       | Handlers, model mocked                | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400.     | That the app boots, or that the fake model and the mock agree.    |
-| Contract verifier (`scripts/`)         | Built app, fake mode, over HTTP       | The deployed API honours its contract and is byte-identical across runs.                           | Anything a real model does.                                       |
+| Contract verifier (`tests/contract/`)  | Built app, fake mode, over HTTP       | The deployed API honours its contract and is byte-identical across runs.                           | Anything a real model does.                                       |
 | Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP  | Thirty documented behaviours hold: numbers, refusals, classifications, boundaries.                 | Answer quality, or that a passing regex means a good answer.      |
 | Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model | Answer relevancy, and correctness against each case's reference on a fixed rubric.                 | Anything stable: it is a noisier instrument and is not a CI gate. |
-| Browser suite (Playwright, `e2e/`)     | Built app, fake mode, headless Chrome | The UI sends what the user typed, renders each answer, and shows every validation and error state. | Anything a real model does.                                       |
+| Browser suite (`tests/e2e/`)           | Built app, fake mode, headless Chrome | The UI sends what the user typed, renders each answer, and shows every validation and error state. | Anything a real model does.                                       |
 
 All but the judge tier run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
 
@@ -119,7 +119,7 @@ All but the judge tier run on every pull request with no key and no network. The
 
 **Deterministic first.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and deterministic for a given response. These are hard failures with no threshold to tune. Assertion text is normalised for typographic whitespace and dashes first, because a model that writes "7 days" with a narrow no-break space has not got the fact wrong.
 
-**Judge tier second, not a gate.** Answer quality is scored by [DeepEval](https://github.com/confident-ai/deepeval) metrics: `AnswerRelevancyMetric` on every judged case, and a `GEval` correctness metric against the `reference` each factual case carries, with a four-level rubric fixed in [`evals/judge.py`](evals/judge.py). The judge model is a different family from the agent, driven through a `DeepEvalBaseLLM` subclass that enforces JSON mode and the same free-model rule as the app. Thresholds were set from nine calibration runs, documented in [`evals/README.md`](evals/README.md). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a fully deterministic CI gate and the judge tier is a separate, noisier signal that needs a key.
+**Judge tier second, not a gate.** Answer quality is scored by [DeepEval](https://github.com/confident-ai/deepeval) metrics: `AnswerRelevancyMetric` on every judged case, and a `GEval` correctness metric against the `reference` each factual case carries, with a four-level rubric fixed in [`evals/harness/judge.py`](evals/harness/judge.py). The judge model is a different family from the agent, driven through a `DeepEvalBaseLLM` subclass that enforces JSON mode and the same free-model rule as the app. Thresholds were set from nine calibration runs, documented in [`evals/README.md`](evals/README.md). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a fully deterministic CI gate and the judge tier is a separate, noisier signal that needs a key.
 
 **Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier and model: new failures, fixed cases, and the rate change per category. The format is documented in [`evals/README.md`](evals/README.md).
 
@@ -128,7 +128,7 @@ All but the judge tier run on every pull request with no key and no network. The
 **Worked example.** [`evals/examples/`](evals/examples/) holds two live deterministic runs. `baseline.json` is the agent as committed. `regression.json` was taken after one edit: the annual refund window in the grounding facts changed from 14 days to 15. Comparing the two prints what that edit cost:
 
 ```
-$ python3 evals/report.py evals/examples/baseline.json evals/examples/regression.json
+$ python3 evals/harness/report.py evals/examples/baseline.json evals/examples/regression.json
 report: evals/examples/regression.json
 tier: deterministic · model: google/gemma-4-31b-it:free · 30 cases · 29 passed, 1 failed · pass rate 96.7%
   adversarial   6/6   100.0%
@@ -160,15 +160,29 @@ One case flipped. `edge-002`, a customer 15 days after purchase, was told they s
 ## Repository layout
 
 ```
-app/           Next.js App Router: UI and API routes
-lib/           LLM client, prompts, zod schemas, corpus loader, unit tests
-docs-corpus/   Twelve markdown files the grounding block is compiled from
-scripts/       Grounding budget check, black-box contract verifier
-e2e/           Playwright browser suite against the built app in fake mode
-evals/         Golden dataset, validation script, pytest harness, run reports
-evals/examples Baseline and regression run pair behind the worked example
-docs/results/  Two checked-in live run reports, referenced from Limitations
-DECISIONS.md   Design decisions and their reasoning
+app/                    Next.js App Router
+  api/                  chat, triage, health route handlers
+  components/           chat panel, triage panel, health badge, view tabs, shared primitives
+lib/                    Domain code with no framework dependency
+  llm/                  client (rotation, retries), models (routing, free-model guard), fake fixtures
+  corpus/               docs loader and the pinned facts the grounding block is built from
+  env.ts                every GROUNDTRUTH_* variable is read here and nowhere else
+  prompts.ts  schemas.ts  limits.ts
+docs-corpus/            Twelve markdown files the grounding block is compiled from
+scripts/                Developer tools (print the grounding block and its budget)
+tests/                  Every TypeScript test, one folder per layer
+  unit/                 Vitest, mirrors lib/ and app/api/
+  contract/             Black-box verifier against the built app in fake mode
+  e2e/                  Playwright: fixtures.ts, pages/ (page objects), specs/
+evals/                  Python eval harness (its own README)
+  dataset.jsonl         The thirty golden cases
+  harness/              dataset, http, contract, text, report, judge, reporting plugin
+  suites/               The deterministic and judge tiers
+  tests/                Unit tests for the harness itself
+  tools/                validate_dataset, judge_spread
+  examples/             Baseline and regression run pair behind the worked example
+docs/results/           Two checked-in live run reports, referenced from Limitations
+DECISIONS.md            Design decisions and their reasoning
 ```
 
 ## License
