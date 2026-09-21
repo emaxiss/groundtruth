@@ -94,7 +94,7 @@ jobs:
 
       # playwright.config.ts starts the built app in fake mode itself.
       - name: Run the browser suite
-        run: pnpm e2e
+        run: pnpm test:e2e
 
       - uses: actions/upload-artifact@v4
         if: failure()

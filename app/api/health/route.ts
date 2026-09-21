@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { groundingStats } from '@/lib/corpus';
+import { readEnv } from '@/lib/env';
 import { fallbackModels, isFakeMode, isFreeModel, paidModelsAllowed } from '@/lib/llm';
 
 export function GET() {
   const stats = groundingStats();
-  const model = process.env.GROUNDTRUTH_MODEL ?? null;
+  const model = readEnv().model ?? null;
   const routing = [model, ...fallbackModels()].filter((m): m is string => Boolean(m));
   return NextResponse.json({
     status: 'ok',
