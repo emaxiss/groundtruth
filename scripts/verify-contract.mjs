@@ -8,7 +8,7 @@ const DISCLAIMER = 'AI-generated, may contain errors';
 let failures = 0;
 
 function check(name, ok, detail = '') {
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : ` — ${detail}`}`);
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok || !detail ? '' : `: ${detail}`}`);
   if (!ok) failures++;
 }
 

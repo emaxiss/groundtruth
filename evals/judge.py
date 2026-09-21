@@ -1,4 +1,4 @@
-"""DeepEval judge layer: answer relevancy and correctness against a reference.
+"""DeepEval judge tier: answer relevancy and correctness against a reference.
 
 The judge model is an OpenRouter model behind `DeepEvalBaseLLM`, so every
 DeepEval metric can drive it. It is a different model family from the agent

@@ -60,8 +60,8 @@ export function fallbackModels(): string[] {
 }
 
 // OpenRouter bills any model whose id does not end in `:free`. An account with
-// credit will happily serve one, so a typo in an env var is the difference
-// between a free run and a charged one. Opt in explicitly or not at all.
+// credit will serve one without warning, so a typo in an env var could turn a
+// free run into a charged one. Paid models require an explicit opt-in.
 export function paidModelsAllowed(): boolean {
   return process.env.GROUNDTRUTH_ALLOW_PAID_MODELS === '1';
 }
@@ -92,39 +92,50 @@ export async function complete({ system, user, jsonMode }: CompleteArgs): Promis
   // instead of quietly spending credit.
   assertModelsAllowed([model, ...fallbacks]);
 
+  const routing = [model, ...fallbacks];
   let lastErr: LlmError | null = null;
-  // One retry. Rate limits get a longer backoff since free-tier ceilings are
-  // per-minute; retrying immediately would just burn the second attempt.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt > 0) await sleep(lastErr?.kind === 'rate_limited' ? 2000 : 400);
-    try {
-      const res = await getClient().chat.completions.create({
-        model,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        temperature: 0,
-        ...(jsonMode ? { response_format: { type: 'json_object' as const } } : {}),
-        // OpenRouter routes to the next entry when the primary errors or is
-        // rate limited. Other providers ignore the field.
-        ...(fallbacks.length > 0 ? { models: [model, ...fallbacks] } : {}),
-      } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
-      // A provider can return 200 with an error payload and no `choices` at
-      // all (upstream capacity errors surface this way through routing), so
-      // this cannot assume the documented shape.
-      const choices: unknown = (res as { choices?: unknown }).choices;
-      if (!Array.isArray(choices) || choices.length === 0) {
-        const detail = (res as { error?: { message?: string } }).error?.message;
-        throw new LlmError(`Model returned no choices${detail ? `: ${detail}` : ''}`, 'upstream');
+  // Client-side rotation over the routing list, two passes. Provider-side
+  // routing only steps in on some errors; an overloaded upstream answering
+  // 200 with no completion, or a timeout, is not one of them. Each attempt
+  // asks for the next model and hands the provider the rest of the list.
+  for (let pass = 0; pass < PASSES; pass++) {
+    for (let i = 0; i < routing.length; i++) {
+      if (pass > 0 || i > 0) await sleep(lastErr?.kind === 'rate_limited' ? 2000 : 400);
+      try {
+        return await request(routing[i], routing.slice(i), { system, user, jsonMode });
+      } catch (err) {
+        lastErr = err instanceof LlmError ? err : classify(err);
+        if (lastErr.kind === 'config') throw lastErr;
       }
-      const text = res.choices[0]?.message?.content?.trim();
-      if (!text) throw new LlmError('Model returned an empty response', 'upstream');
-      return { text, model: res.model || model };
-    } catch (err) {
-      lastErr = err instanceof LlmError ? err : classify(err);
-      if (lastErr.kind === 'config') throw lastErr;
     }
   }
   throw lastErr ?? new LlmError('Unknown model failure', 'upstream');
+}
+
+const PASSES = 2;
+
+async function request(model: string, models: string[], args: CompleteArgs): Promise<Completion> {
+  const res = await getClient().chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: args.system },
+      { role: 'user', content: args.user },
+    ],
+    temperature: 0,
+    ...(args.jsonMode ? { response_format: { type: 'json_object' as const } } : {}),
+    // OpenRouter routes to the next entry when the primary errors or is
+    // rate limited. Other providers ignore the field.
+    ...(models.length > 1 ? { models } : {}),
+  } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
+  // A provider can return 200 with an error payload and no `choices` at
+  // all (upstream capacity errors surface this way through routing), so
+  // this cannot assume the documented shape.
+  const choices: unknown = (res as { choices?: unknown }).choices;
+  if (!Array.isArray(choices) || choices.length === 0) {
+    const detail = (res as { error?: { message?: string } }).error?.message;
+    throw new LlmError(`Model returned no choices${detail ? `: ${detail}` : ''}`, 'upstream');
+  }
+  const text = res.choices[0]?.message?.content?.trim();
+  if (!text) throw new LlmError('Model returned an empty response', 'upstream');
+  return { text, model: res.model || model };
 }

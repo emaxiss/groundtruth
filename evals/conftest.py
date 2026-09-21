@@ -85,8 +85,7 @@ def client(app_url: str, request: pytest.FixtureRequest) -> httpx.Client:
         if health.status_code != 200:
             pytest.exit(f"/api/health returned {health.status_code} at {app_url}", returncode=2)
         body = health.json()
-        # A run that quietly spends money is worse than a run that does not
-        # happen, so this refuses before the first case rather than after.
+        # Refuse before the first case rather than after one that was billed.
         if not body.get("all_models_free") and not body.get("paid_models_allowed"):
             pytest.exit(
                 f"app at {app_url} is configured with a paid model ({body.get('model')}); "
@@ -106,8 +105,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 #
 # Every parametrised case records an outcome. At session end the outcomes are
 # written to evals/results/<timestamp>.json and compared with the previous run
-# of the same tier, so a prompt edit reports what it cost rather than a bare
-# pass rate.
+# of the same tier and model.
 
 HEALTH_KEY = pytest.StashKey[dict[str, Any]]()
 RESULTS_KEY = pytest.StashKey[list[CaseResult]]()
@@ -157,6 +155,8 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
         result, score, message = "skipped", None, _first_line(rep.longreprtext)
     elif call.excinfo is not None and call.excinfo.typename == "RateLimited":
         result, score, message = "rate_limited", None, str(call.excinfo.value)
+    elif call.excinfo is not None and call.excinfo.typename == "ProviderUnavailable":
+        result, score, message = "unavailable", None, str(call.excinfo.value)
     else:
         result, message = "failed", _failure_message(rep)
         # A judge-tier failure may have stopped before the correctness metric

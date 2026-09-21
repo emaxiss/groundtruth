@@ -2,7 +2,7 @@
 
 TaskLoop has three plans: Free, Pro, and Team. Prices are in USD and exclude sales tax or VAT.
 
-## Free — $0
+## Free: $0
 
 - 3 boards per workspace
 - 5 users per workspace (pending invitations count toward this)
@@ -11,7 +11,7 @@ TaskLoop has three plans: Free, Pro, and Team. Prices are in USD and exclude sal
 - Community and in-app chat support
 - No SSO, no SLA, no priority routing
 
-## Pro — $12 per user per month
+## Pro: $12 per user per month
 
 Billed monthly at $12/user/month, or annually at $120/user/year (equivalent to $10/user/month, a 17% discount).
 
@@ -22,7 +22,7 @@ Billed monthly at $12/user/month, or annually at $120/user/year (equivalent to $
 - All integrations (Slack, GitHub, Google Drive)
 - API access at 100 requests per minute
 
-## Team — $29 per user per month
+## Team: $29 per user per month
 
 Billed monthly at $29/user/month, or annually at $290/user/year (equivalent to $24.17/user/month).
 

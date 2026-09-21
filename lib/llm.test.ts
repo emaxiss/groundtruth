@@ -146,3 +146,58 @@ describe('assertModelsAllowed', () => {
     );
   });
 });
+
+describe('rotation', () => {
+  const overloaded = { error: { message: 'Service temporarily overloaded' } };
+  const answer = { model: 'third:free', choices: [{ message: { content: 'ok' } }] };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    process.env.GROUNDTRUTH_FALLBACK_MODELS = 'second:free,third:free';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('asks the next model in the list when an upstream returns no completion', async () => {
+    create
+      .mockResolvedValueOnce(overloaded)
+      .mockResolvedValueOnce(overloaded)
+      .mockResolvedValueOnce(answer);
+    const pending = complete({ system: 's', user: 'u' });
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({ text: 'ok', model: 'third:free' });
+    expect(create.mock.calls.map((c) => (c[0] as { model: string }).model)).toEqual([
+      'primary:free',
+      'second:free',
+      'third:free',
+    ]);
+    expect(create.mock.calls[1][0].models).toEqual(['second:free', 'third:free']);
+    expect(create.mock.calls[2][0]).not.toHaveProperty('models');
+  });
+
+  it('makes a second pass over the list before giving up', async () => {
+    create.mockResolvedValue(overloaded);
+    const pending = complete({ system: 's', user: 'u' });
+    pending.catch(() => {});
+    await vi.runAllTimersAsync();
+    await expect(pending).rejects.toMatchObject({ kind: 'upstream' });
+    expect(create).toHaveBeenCalledTimes(6);
+  });
+
+  it('rotates on a timeout as well as an upstream error', async () => {
+    const timeout = Object.assign(new Error('timed out'), { name: 'APIConnectionTimeoutError' });
+    create.mockRejectedValueOnce(timeout).mockResolvedValueOnce(answer);
+    const pending = complete({ system: 's', user: 'u' });
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toMatchObject({ text: 'ok' });
+    expect(create.mock.calls[1][0].model).toBe('second:free');
+  });
+
+  it('stops at once on a configuration error', async () => {
+    process.env.GROUNDTRUTH_FALLBACK_MODELS = 'second:free,paid/model';
+    await expect(complete({ system: 's', user: 'u' })).rejects.toMatchObject({ kind: 'config' });
+    expect(create).not.toHaveBeenCalled();
+  });
+});

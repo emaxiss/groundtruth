@@ -1,7 +1,7 @@
 import { buildGroundingBlock } from './corpus';
 
 export const AI_DISCLAIMER =
-  'AI-generated, may contain errors — verify with support for account-specific issues.';
+  'AI-generated, may contain errors. Verify with support for account-specific issues.';
 
 const RULES = `RULES (in priority order, highest first):
 1. Answer ONLY from the TaskLoop documentation below. It is the complete set of documented facts. If a question is not covered, say you do not have that documented and offer to connect the customer with a human support agent. Never fill gaps with plausible guesses.
@@ -23,7 +23,7 @@ export function triageSystemPrompt(): string {
 
 ${RULES}
 
-CLASSIFICATION CONTRACT — respond with a single JSON object, no prose, no code fences:
+CLASSIFICATION CONTRACT: respond with a single JSON object, no prose, no code fences:
 {
   "category": "billing" | "bug" | "how_to" | "feature_request" | "account" | "abuse",
   "severity": "low" | "medium" | "high" | "critical",
