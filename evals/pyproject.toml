@@ -4,6 +4,7 @@ pythonpath = ["."]
 addopts = "-ra --strict-markers"
 markers = [
   "judge: scored by an LLM judge; noisier and needs a model, excluded from the CI gate with -m 'not judge'",
+  "agreement: scores answers of known quality to measure the judge itself; needs a judge model, no app",
 ]
 
 [tool.ruff]

@@ -1,0 +1,143 @@
+name: Live evals
+
+# The pull request gate runs in fake mode. This workflow is the other half: the
+# same harness against real free-tier models, on a schedule, so drift in the
+# models or the provider shows up as a delta instead of going unnoticed.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC, after the provider's daily cap resets
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: Attempts per case; above 1 the report lists unstable cases
+        default: '1'
+      judge:
+        description: Also run the judge tier
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-evals
+  cancel-in-progress: false
+
+env:
+  GROUNDTRUTH_BASE_URL: https://openrouter.ai/api/v1
+  GROUNDTRUTH_MODEL: google/gemma-4-31b-it:free
+  GROUNDTRUTH_FALLBACK_MODELS: google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free,nex-agi/nex-n2.5-pro:free
+  GROUNDTRUTH_JUDGE_MODEL: nex-agi/nex-n2.5-pro:free
+  GROUNDTRUTH_JUDGE_FALLBACK_MODELS: dots-studio/dots-3-note-preview:free,nvidia/nemotron-3-super-120b-a12b:free
+  # Never 1 here: every model above must end in ":free" or the app refuses to start a run.
+  GROUNDTRUTH_ALLOW_PAID_MODELS: '0'
+  GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
+  GROUNDTRUTH_APP_URL: http://localhost:3000
+  GROUNDTRUTH_EVAL_DELAY_MS: '3500'
+  GROUNDTRUTH_EVAL_REPEATS: ${{ inputs.repeats || '1' }}
+  DEEPEVAL_TELEMETRY_OPT_OUT: '1'
+
+jobs:
+  live:
+    name: deterministic and judge tiers against live models
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Skip when no key is configured
+        id: key
+        run: |
+          if [ -z "$GROUNDTRUTH_API_KEY" ]; then
+            echo "::notice::GROUNDTRUTH_API_KEY is not set; skipping the live run."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.key.outputs.present == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        if: steps.key.outputs.present == 'true'
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: evals/requirements.txt
+
+      - name: Install and build
+        if: steps.key.outputs.present == 'true'
+        run: |
+          pnpm install --frozen-lockfile
+          pip install -r evals/requirements.txt
+          pnpm build
+
+      - name: Start the app against the live provider
+        if: steps.key.outputs.present == 'true'
+        run: |
+          pnpm start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 1
+          done
+          curl -s http://localhost:3000/api/health
+
+      - name: Deterministic tier
+        if: steps.key.outputs.present == 'true'
+        id: deterministic
+        continue-on-error: true
+        run: pnpm evals:deterministic 2>&1 | tee deterministic.log
+
+      - name: Judge tier
+        if: steps.key.outputs.present == 'true' && (github.event_name == 'schedule' || inputs.judge)
+        id: judge
+        continue-on-error: true
+        run: pnpm evals:judge 2>&1 | tee judge.log
+
+      - name: Summarise
+        if: steps.key.outputs.present == 'true'
+        run: |
+          {
+            echo '## Live eval run'
+            echo '```'
+            sed -n '/groundtruth run report/,/short test summary\|^=* [0-9]* passed/p' deterministic.log | head -40
+            echo '```'
+            if [ -f judge.log ]; then
+              echo '### Judge tier'
+              echo '```'
+              sed -n '/groundtruth run report/,/short test summary\|^=* [0-9]* passed/p' judge.log | head -40
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          name: live-eval-reports
+          path: |
+            evals/results/
+            deterministic.log
+            judge.log
+          retention-days: 90
+
+      # A failed case fails the run. A throttled or unavailable case does not:
+      # that is the provider's state, and the report already says so.
+      - name: Fail on a regression
+        if: steps.key.outputs.present == 'true'
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          reports = [json.loads(p.read_text()) for p in sorted(pathlib.Path("evals/results").glob("*.json"))]
+          failed = {r["tier"]: r["totals"]["failed"] for r in reports if r["tier"] == "deterministic"}
+          if not failed:
+              sys.exit("no deterministic report was written")
+          sys.exit(1 if failed["deterministic"] else 0)
+          PY

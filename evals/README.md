@@ -12,8 +12,9 @@ harness/          The harness as a package
   report.py       Run report and delta arithmetic, pure functions, plus a compare command
   reporting.py    pytest plugin: one outcome per case, report written at session end
   judge.py        DeepEval judge model, metrics, rubric, and goldens loader
-suites/           test_deterministic.py (CI gate) and test_judge.py (-m judge)
+suites/           test_deterministic.py (CI gate), test_judge.py, test_judge_agreement.py
 tests/            Unit tests for the harness itself, no app needed
+judge_agreement.jsonl  Sixteen answers of known quality, for measuring the judge itself
 tools/            validate_dataset.py, judge_spread.py
 examples/         Baseline and regression run pair used in the top-level README
 results/          Run reports, gitignored
@@ -143,6 +144,18 @@ python3 evals/tools/judge_spread.py --runs 3
 
 Example from an earlier calibration run. On `edge-001` (a refund request exactly 14 days after an annual purchase) the agent answered that day 14 was day 15 and outside the window. The deterministic tier passed it, because the answer mentioned "14" and matched none of the refusal patterns. The judge scored correctness 0.0 with the reason "contradicts the reference by saying a purchase exactly 14 days ago is on day 15 and not refundable". The reference comparison is what caught it; a rubric alone would not have.
 
+### Does the judge agree with known answers
+
+`judge_agreement.jsonl` holds sixteen answers written to a label: for four references, one `faithful` paraphrase, one with a `missing_secondary` fact, one with a `wrong_figure`, and one `contradiction`. The first two should clear the correctness threshold and the last two should not. The label is true by construction, so the suite measures the judge and nothing else, and no app is involved:
+
+```bash
+pnpm evals:agreement
+```
+
+On 2026-09-21 the judge `nex-agi/nex-n2.5-pro:free` agreed with all sixteen labels (16/16 in 98 seconds) at the 0.5 threshold. That is one run on a small set, so it shows the judge separates these classes, not how often it would on production traffic.
+
+Re-run it with the calibration whenever the judge model or the rubric changes. A judge that cannot separate a wrong figure from a missing detail makes every threshold above meaningless.
+
 ## Run reports
 
 Every run writes `evals/results/<timestamp>.json` (gitignored; `GROUNDTRUTH_RESULTS_DIR` overrides the directory) and prints a summary plus the delta against the previous run of the same tier:
@@ -163,19 +176,22 @@ delta vs 2026-09-16T17-39-52Z.json:
   edge: 100.0% -> 83.3% (-16.7)
 ```
 
+Set `GROUNDTRUTH_EVAL_REPEATS=3` to run every case three times. A case passes only if every scored attempt passed; one that passed some attempts and failed others is recorded as failed and listed on an `unstable:` line as `id passes/attempts`. A live model varies even at temperature 0, and a case that holds two times in three is not a case that holds. Throttled and unavailable attempts are left out of the count.
+
 The `served by:` line counts the `x-groundtruth-model` header on each response. With fallback routing configured, it shows whether the primary model or a fallback produced a run; in fake mode it reads `fake ×30`.
 
 The JSON carries the same numbers plus one entry per case:
 
-| Field                       | Meaning                                                                                                  |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `run_at`, `tier`, `app_url` | When, which tier (`deterministic` or `judge`), and which app the run hit.                                |
-| `model`, `fake_llm`         | Copied from `/api/health` so a report says what it measured.                                             |
-| `cases[]`                   | `id`, `category`, `endpoint`, `outcome`, `score`, `duration_ms`, and the assertion `message` on failure. |
-| `cases[].outcome`           | `passed`, `failed`, `rate_limited`, `unavailable`, or `skipped`. Only the first two are scored.          |
-| `cases[].score`             | `1.0` or `0.0` on the deterministic tier; the correctness score on the judge tier.                       |
-| `cases[].scores`            | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                          |
-| `categories`, `totals`      | Per-category and overall counts per outcome, plus `scored` and `pass_rate`.                              |
+| Field                        | Meaning                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `run_at`, `tier`, `app_url`  | When, which tier (`deterministic` or `judge`), and which app the run hit.                                |
+| `model`, `fake_llm`          | Copied from `/api/health` so a report says what it measured.                                             |
+| `cases[]`                    | `id`, `category`, `endpoint`, `outcome`, `score`, `duration_ms`, and the assertion `message` on failure. |
+| `cases[].outcome`            | `passed`, `failed`, `rate_limited`, `unavailable`, or `skipped`. Only the first two are scored.          |
+| `cases[].score`              | `1.0` or `0.0` on the deterministic tier; the correctness score on the judge tier.                       |
+| `cases[].attempts`, `passes` | Repeat runs only: how many times the case ran and how many scored attempts passed.                       |
+| `cases[].scores`             | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                          |
+| `categories`, `totals`       | Per-category and overall counts per outcome, plus `scored` and `pass_rate`.                              |
 
 The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost. Two saved reports can be compared directly: `python3 evals/harness/report.py <previous.json> <current.json>` prints the same summary and delta for any pair, and `examples/` holds the pair the top-level README walks through.
 

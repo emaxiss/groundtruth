@@ -15,6 +15,7 @@ from harness.dataset import CASES, DEFAULT_RESULTS_DIR, Case
 from harness.report import (
     CaseResult,
     Report,
+    collapse_attempts,
     compute_delta,
     format_delta,
     format_report,
@@ -132,7 +133,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         model=health.get("model"),
         fake_llm=health.get("fake_llm"),
         paid_models_allowed=health.get("paid_models_allowed"),
-        cases=results,
+        cases=collapse_attempts(results),
     )
     path = write_report(report, results_dir)
     current = load_report(path)
