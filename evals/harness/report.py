@@ -26,6 +26,8 @@ class CaseResult:
     message: str | None = None
     served_model: str | None = None
     scores: dict[str, Any] | None = None  # judge tier: relevancy, correctness, judge_model
+    attempts: int = 1  # how many times the case ran (GROUNDTRUTH_EVAL_REPEATS)
+    passes: int | None = None  # scored attempts that passed; None on a single-attempt run
 
 
 @dataclass
@@ -46,6 +48,64 @@ class Report:
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2) + "\n"
+
+
+def collapse_attempts(results: list[CaseResult]) -> list[CaseResult]:
+    """One result per case when a run repeats each case.
+
+    A case passes only if every scored attempt passed. A case that passed some
+    attempts and failed others is recorded as failed with `passes` below
+    `attempts`, which is what the report lists as unstable: at temperature 0 a
+    live model still varies, and a case that holds two times in three is not
+    a case that holds.
+    """
+    by_id: dict[str, list[CaseResult]] = {}
+    for r in results:
+        by_id.setdefault(r.id, []).append(r)
+
+    collapsed = []
+    for attempts in by_id.values():
+        if len(attempts) == 1:
+            collapsed.append(attempts[0])
+            continue
+        scored = [a for a in attempts if a.outcome in ("passed", "failed")]
+        passes = sum(1 for a in scored if a.outcome == "passed")
+        outcome = _verdict(len(scored), passes) or attempts[0].outcome
+        first_failure = next((a for a in scored if a.outcome == "failed"), None)
+        scores = [a.score for a in scored if a.score is not None]
+        served = served_models([{"served_model": a.served_model} for a in attempts])
+        collapsed.append(
+            CaseResult(
+                id=attempts[0].id,
+                category=attempts[0].category,
+                endpoint=attempts[0].endpoint,
+                outcome=outcome,
+                score=round(sum(scores) / len(scores), 4) if scores else None,
+                duration_ms=sum(a.duration_ms for a in attempts),
+                message=first_failure.message if first_failure else attempts[0].message,
+                served_model=next(iter(served), None),
+                scores=(first_failure or attempts[-1]).scores,
+                attempts=len(attempts),
+                passes=passes if scored else None,
+            )
+        )
+    return collapsed
+
+
+def _verdict(scored: int, passes: int) -> str | None:
+    """Passed only if every scored attempt passed; None when nothing was scored."""
+    if scored == 0:
+        return None
+    return "passed" if passes == scored else "failed"
+
+
+def unstable_cases(cases: list[dict[str, Any]]) -> list[str]:
+    """Cases that passed some attempts and failed others, as `id passes/attempts`."""
+    return [
+        f"{c['id']} {c['passes']}/{c['attempts']}"
+        for c in cases
+        if c.get("passes") is not None and 0 < c["passes"] < c.get("attempts", 1)
+    ]
 
 
 def summarize(cases: list[CaseResult]) -> dict[str, Any]:
@@ -168,6 +228,9 @@ def format_report(report: dict[str, Any], path: Path) -> list[str]:
     ]
     for cat, s in report["categories"].items():
         lines.append(f"  {cat:<13} {s['passed']}/{s['scored']:<3} {_pct(s['pass_rate'])}")
+    unstable = unstable_cases(report["cases"])
+    if unstable:
+        lines.append("unstable: " + ", ".join(unstable))
     served = served_models(report["cases"])
     if served:
         lines.append("served by: " + ", ".join(f"{m} ×{n}" for m, n in served.items()))
