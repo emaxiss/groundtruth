@@ -41,6 +41,10 @@ __pycache__/
 .pytest_cache/
 evals/results/
 
+# playwright
+/playwright-report/
+/test-results/
+
 # local dev artifacts
 temporary-screenshots/
 *.tsbuildinfo
