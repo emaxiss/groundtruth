@@ -4,7 +4,7 @@
 
 An AI customer-support agent, built to be measured. The agent answers questions about TaskLoop, a fictional project-management SaaS, using only its documentation. The interesting part is not the agent: it is the evaluation harness that grades it, written in Python and testing the app black-box over HTTP as a separate stack.
 
-The split is deliberate. Shipping an LLM feature is easy; knowing whether it still works after a prompt edit, a model swap, or a docs change is the hard part. This repo is an argument about how to know that — a golden dataset with an explicit taxonomy, deterministic assertions that cannot flake, run-over-run regression tracking, and a black-box harness that reports which model actually answered.
+The split is deliberate. Shipping an LLM feature is easy; knowing whether it still works after a prompt edit, a model swap, or a docs change is the hard part. This repo is an argument about how to know that — a golden dataset with an explicit taxonomy, deterministic assertions that cannot flake, DeepEval judge metrics quarantined behind a pytest marker, run-over-run regression tracking, and a black-box harness that reports which model actually answered.
 
 ![The chat interface answering a documented pricing question, then declining a prompt-injection attempt](docs/chat.png)
 
@@ -23,7 +23,7 @@ The split is deliberate. Shipping an LLM feature is easy; knowing whether it sti
 | Eval harness, deterministic tier                                   | Working |
 | Run reports with run-over-run delta                                | Working |
 | Live-model verification                                            | Working |
-| Eval harness, judge tier                                           | Working |
+| Eval harness, judge tier (DeepEval)                                | Working |
 | Playwright E2E suite                                               | Planned |
 
 The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one. The browser suite is listed as planned because it is: nothing below describes it as if it existed.
@@ -33,9 +33,10 @@ The agent runs today, the deterministic tier of the harness gates every pull req
 ```
                     ┌────────────────────────┐
                     │  Python eval harness   │
-                    │  pytest + httpx        │
+                    │  pytest + DeepEval     │
                     │                        │
-                    │  30 golden cases       │
+                    │  deterministic tier    │
+                    │  judge tier  (-m)      │
                     │  run reports + delta   │
                     └───────────┬────────────┘
                                 │ HTTP (black box)
@@ -107,7 +108,7 @@ Six layers, cheapest first. Each one is there because the layer below it cannot 
 | Route tests (Vitest, `app/api/`)       | Handlers, model mocked                | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400. | That the app boots, or that the fake and the mock agree.          |
 | Contract verifier (`scripts/`)         | Built app, fake mode, over HTTP       | The deployed API honours its contract and is byte-identical across runs.                       | Anything a real model does.                                       |
 | Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP  | Thirty documented behaviours hold: numbers, refusals, classifications, boundaries.             | Answer quality, or that a passing regex means a good answer.      |
-| Judge eval tier (`evals/`, `-m judge`) | Running app, live, plus a judge model | Relevancy and correctness against each case's reference, on rubric anchors.                    | Anything stable: it is a noisier instrument and is not a CI gate. |
+| Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model | Answer relevancy, and correctness against each case's reference on a fixed rubric.             | Anything stable: it is a noisier instrument and is not a CI gate. |
 | Browser suite                          | Planned                               | The UI wires to the API and shows each state.                                                  | Not built.                                                        |
 
 The first four run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
@@ -118,7 +119,7 @@ The first four run on every pull request with no key and no network. The run rep
 
 **Deterministic first.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and incapable of flaking. These are hard failures with no threshold to tune. Assertion text is normalised for typographic whitespace and dashes first, because a model that writes "7 days" with a narrow no-break space has not got the fact wrong.
 
-**Judged second, and quarantined.** Answer quality (relevancy, and correctness against the `reference` each factual case carries) is scored by an LLM judge in [`evals/judge.py`](evals/judge.py): a different model family from the agent, one JSON-mode call per case, a rubric with fixed anchors, and thresholds calibrated over three runs and documented in [`evals/README.md`](evals/README.md). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a fully deterministic CI gate and the judged suite is a separate, noisier signal that needs a key.
+**Judged second, and quarantined.** Answer quality is scored by [DeepEval](https://github.com/confident-ai/deepeval) metrics: `AnswerRelevancyMetric` on every judged case, and a `GEval` correctness metric against the `reference` each factual case carries, with a four-level rubric fixed in [`evals/judge.py`](evals/judge.py). The judge model is a different family from the agent, driven through a `DeepEvalBaseLLM` subclass that enforces JSON mode and the same free-model rule as the app. Thresholds were calibrated over three runs and are documented in [`evals/README.md`](evals/README.md). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a fully deterministic CI gate and the judged suite is a separate, noisier signal that needs a key.
 
 **Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier and model: new failures, fixed cases, and the rate change per category. A single pass rate tells you nothing; the delta tells you whether the last prompt edit cost you anything. The format is documented in [`evals/README.md`](evals/README.md).
 
@@ -128,7 +129,7 @@ The first four run on every pull request with no key and no network. The run rep
 
 ## Limitations
 
-- **The judge tier is a small free model with a rubric.** It separates a wrong figure from a missing detail reliably over three calibration runs, and it disagreed with its own rubric once in twenty-seven scores. It is not a substitute for a frontier judge, and its thresholds are statements about this judge, not about the agent.
+- **The judge is a small free model.** DeepEval's metrics are only as good as the model behind them; this one separates a wrong figure from a missing detail reliably over three calibration runs, and is not a substitute for a frontier judge. The thresholds are statements about this judge, not about the agent.
 - **The live results come from one provider and few runs.** Two live reports are checked in under [`docs/results/`](docs/results/). The 30/30 run was served entirely by the fallback model, `nvidia/nemotron-3-super-120b-a12b:free`, because the free pool for the configured default was saturated. The earlier 25/30 run predates the served-model header, so which model answered it is unknown. Neither is a claim about `google/gemma-4-31b-it:free` specifically, and these prompts have not been exercised against a frontier model or across providers.
 - **Free-tier providers are unreliable as well as rate limited.** Upstream capacity errors arrive as a 200 with no completion in it, and the shared free pool for a given model is often saturated, so fallback routing answers instead. A live run reports which model actually served each case for exactly this reason.
 - **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.

@@ -74,35 +74,56 @@ GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm ev
 
 ## Running the judge tier
 
-The judge tier scores answer quality on every chat case that carries a `reference`: nine cases today, the six `factual` ones and the three `edge` ones with a documented right answer. It is not a CI gate. It needs a key and a judge model, both read from the environment:
+The judge tier scores answer quality with [DeepEval](https://github.com/confident-ai/deepeval) on every chat case that carries a `reference`: nine cases today, the six `factual` ones and the three `edge` ones with a documented right answer. It is not a CI gate. It needs a key and a judge model, both read from the environment:
 
 ```bash
-export GROUNDTRUTH_API_KEY=sk-or-v1-...
-export GROUNDTRUTH_JUDGE_MODEL=nex-agi/nex-n2.5-pro:free
 GROUNDTRUTH_APP_URL=http://localhost:3000 GROUNDTRUTH_EVAL_DELAY_MS=3500 pnpm evals:judge
 ```
 
-The judge is `evals/judge.py`: one JSON-mode call per case returning `relevancy` and `correctness`, each in `[0, 1]`, plus a one-sentence rationale. The rubric is in the module and anchors correctness at 1.0 (every reference fact present), 0.7 (a secondary fact missing), 0.3 (a figure wrong or the verdict hedged), and 0.0 (verdict contradicted). The judge talks to the provider directly, uses a different model family from the agent so it is not grading its own answers, and is subject to the same `:free` rule.
+DeepEval reads `.env` and then `.env.local` from the working directory into the process environment without overriding variables that are already set, so a `.env.local` that runs the app also configures the judge (`GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_JUDGE_MODEL`, `GROUNDTRUTH_JUDGE_FALLBACK_MODELS`). Set `DEEPEVAL_DISABLE_DOTENV=1` to make the harness read only the process environment.
 
-A judge that cannot produce a score (malformed JSON, provider error) is recorded as `skipped` with the error, not as a low score. A judge that is rate limited is `rate_limited`.
+Two metrics per case, both in `evals/judge.py`:
+
+| Metric      | DeepEval class          | Inputs                                | What it scores                                            |
+| ----------- | ----------------------- | ------------------------------------- | --------------------------------------------------------- |
+| relevancy   | `AnswerRelevancyMetric` | input, actual output                  | Whether the answer addresses the question that was asked. |
+| correctness | `GEval` with a `Rubric` | input, actual output, expected output | Agreement with the reference on a fixed four-level scale. |
+
+The correctness rubric anchors at 10 (every reference fact present), 7 to 9 (a secondary fact missing), 3 to 6 (a figure wrong or the verdict hedged), and 0 to 2 (verdict contradicted); DeepEval reports it normalised to `[0, 1]`. The dataset is loaded as DeepEval goldens (`load_goldens`), each case's answer is fetched from the running app and wrapped in an `LLMTestCase`, and `assert_test` applies both metrics. Scores are recorded into the run report whether or not the assertion held.
+
+The judge model is `OpenRouterJudge`, a `DeepEvalBaseLLM` subclass: JSON mode on every call, the schema DeepEval passes to `generate()` validated locally, the same `:free` rule as the app, and the served model recorded. A judge that cannot produce a score, or times out, is recorded as `skipped` with the error, not as a low score; a rate-limited judge is `rate_limited`. DeepEval's per-attempt budget is raised to 300 seconds in `conftest.py` because free judge models are slow; a nine-case run takes 10 to 15 minutes.
 
 ### Thresholds and how they were set
 
-| Metric      | Threshold | Observed over 3 runs (9 cases each)                                     |
-| ----------- | --------- | ----------------------------------------------------------------------- |
-| relevancy   | 0.7       | 1.00 on every case in every run                                         |
-| correctness | 0.5       | 1.00 or 0.70 on every case, except one 0.30 on `factual-005` in one run |
+Three consecutive runs on 2026-09-21 with the judge `nex-agi/nex-n2.5-pro:free` and the agent served by `nvidia/nemotron-3-super-120b-a12b:free` (`python3 evals/judge_spread.py --runs 3`). Cases with `n` below 3 hit an upstream 502 from the agent's provider in one run and were recorded as failed at the HTTP layer, so the judge never scored them:
 
-The threshold sits between two rubric anchors on purpose: an answer missing a secondary fact (0.7) passes, an answer with a wrong figure or a hedged verdict (0.3) fails. The single 0.30 was for "The Free plan allows 3 boards." with the reference's two secondary facts omitted, which the rubric itself says is a 0.7; that disagreement between the judge and its own rubric is the noise the tier is quarantined for. Re-run the calibration whenever the judge model changes:
+```
+case          relevancy min/mean/max     correctness min/mean/max   n
+edge-001      1.00 / 1.00 / 1.00         1.00 / 1.00 / 1.00         3
+edge-002      1.00 / 1.00 / 1.00         0.80 / 0.80 / 0.80         2
+edge-006      1.00 / 1.00 / 1.00         0.90 / 0.95 / 1.00         2
+factual-001   1.00 / 1.00 / 1.00         1.00 / 1.00 / 1.00         3
+factual-002   1.00 / 1.00 / 1.00         0.90 / 0.97 / 1.00         3
+factual-003   1.00 / 1.00 / 1.00         0.80 / 0.80 / 0.80         2
+factual-004   1.00 / 1.00 / 1.00         1.00 / 1.00 / 1.00         2
+factual-005   1.00 / 1.00 / 1.00         0.70 / 0.75 / 0.80         2
+factual-006   1.00 / 1.00 / 1.00         0.80 / 0.85 / 0.90         2
+
+lowest observed: relevancy 1.00, correctness 0.70
+```
+
+Across the six earlier calibration runs that fixed the metric configuration the floors were lower: relevancy 0.57 on `factual-004` (a correct answer that also explained the neighbouring plan, which the relevancy metric counts as off-topic statements) and correctness 0.60 on `edge-006` (a right verdict with a secondary fact missing). Both thresholds therefore sit at 0.5: relevancy 0.5 tolerates an answer that adds correct context, and correctness 0.5 sits between the 0.7 anchor (secondary fact missing) and the 0.3 anchor (a figure wrong or the verdict hedged).
+
+The correctness threshold sits between two rubric anchors on purpose: an answer missing a secondary fact passes, an answer with a wrong figure or a hedged verdict fails. Re-run the calibration whenever the judge model changes:
 
 ```bash
 pnpm evals:judge   # three times
 python3 evals/judge_spread.py --runs 3
 ```
 
-`judge_spread.py` prints min / mean / max per case and metric across the last N judge reports and the lowest score seen anywhere.
+`judge_spread.py` prints min / mean / max per case and metric across the last N judge reports and the lowest score seen anywhere. Override the thresholds with `GROUNDTRUTH_JUDGE_RELEVANCY_MIN` and `GROUNDTRUTH_JUDGE_CORRECTNESS_MIN`.
 
-What the tier catches that the deterministic tier cannot: on the confirmation run after calibration, `edge-001` (a refund request exactly 14 days after an annual charge) scored 0.0 because the agent answered that day 14 was day 15 and declined the refund, having passed the same case in the three runs before. The deterministic assertions on that case are conservative regexes; the judge compared the verdict to the reference. The grounding fact now states the boundary arithmetic explicitly. Override the thresholds with `GROUNDTRUTH_JUDGE_RELEVANCY_MIN` and `GROUNDTRUTH_JUDGE_CORRECTNESS_MIN`.
+One of the earlier calibration runs also showed what the tier is for. On `edge-001` (a refund request exactly 14 days after an annual purchase) the agent answered that day 14 was day 15 and outside the window. The deterministic tier passed it, because the answer mentioned "14" and matched none of the refusal patterns. The judge scored correctness 0.0 with the reason "contradicts the reference by saying a purchase exactly 14 days ago is on day 15 and not refundable". That is the class of regression this tier exists to catch, and the reason the correctness metric compares against a reference rather than a rubric alone.
 
 ## Run reports
 

@@ -4,6 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+
+# DeepEval ships opt-out telemetry (PostHog). Off, unconditionally, before any
+# deepeval import; the same variable is set in .env.example and in CI.
+os.environ.setdefault("DEEPEVAL_TELEMETRY_OPT_OUT", "1")
+# Free judge models are slow; DeepEval's default 180 s per-attempt budget cut
+# off two of nine cases on a run where a passing case took 167 s. The judge's
+# own retry budget (evals/judge.py) fits inside this figure.
+os.environ.setdefault("DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE", "300")
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -117,11 +125,15 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
     rep: pytest.TestReport = outcome.get_result()
     if rep.when != "call" or not hasattr(item, "callspec"):
         return
-    case = item.callspec.params.get("case") or item.callspec.params.get("judged")
+    case = item.callspec.params.get("case")
+    golden = item.callspec.params.get("golden")
+    if case is None and golden is not None:
+        meta = getattr(golden, "additional_metadata", None) or {}
+        case = next((c for c in CASES if c.id == meta.get("id")), None)
     if not isinstance(case, Case):
         return
-    if call.excinfo is not None and call.excinfo.typename == "JudgeError":
-        # The judge failed to score, which says nothing about the agent.
+    if call.excinfo is not None and call.excinfo.typename in ("JudgeError", "TimeoutError"):
+        # The judge failed to score (or timed out), which says nothing about the agent.
         item.config.stash[RESULTS_KEY].append(
             CaseResult(
                 id=case.id,
@@ -137,15 +149,19 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
         return
 
     props = dict(rep.user_properties)
+    recorded = props.get("score")
     if rep.passed:
-        result, score, message = "passed", float(props.get("score", 1.0)), props.get("rationale")
+        result, message = "passed", props.get("rationale")
+        score = float(recorded) if recorded is not None else 1.0
     elif rep.skipped:
         result, score, message = "skipped", None, _first_line(rep.longreprtext)
     elif call.excinfo is not None and call.excinfo.typename == "RateLimited":
         result, score, message = "rate_limited", None, str(call.excinfo.value)
     else:
         result, message = "failed", _failure_message(rep)
-        score = float(props["score"]) if "score" in props else 0.0
+        # A judge-tier failure may have stopped before the correctness metric
+        # ran; an unknown score on a failed case is recorded as 0.0.
+        score = float(recorded) if recorded is not None else 0.0
 
     item.config.stash[RESULTS_KEY].append(
         CaseResult(
