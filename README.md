@@ -123,6 +123,8 @@ All but the judge tier run on every pull request with no key and no network. The
 
 **Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier and model: new failures, fixed cases, and the rate change per category. The format is documented in [`evals/README.md`](evals/README.md).
 
+**Stability and drift.** `GROUNDTRUTH_EVAL_REPEATS` runs each case several times and the report lists the cases that did not hold every time, because a single live pass says little about a sampled system. A scheduled workflow ([`live-evals.yml`](.github/workflows/live-evals.yml)) runs both tiers against the live free-tier models weekly, fails only on scored failures, and keeps the run reports as artifacts. The judge itself is checked against sixteen answers of known quality before its scores are trusted.
+
 **Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed. Provider rate limiting is raised as its own outcome rather than scored as a failed case, so a throttled run cannot masquerade as a regression. Every response names the model that served it, and the run report counts them, because with fallback routing on that is the only way to know what a run measured.
 
 **Worked example.** [`evals/examples/`](evals/examples/) holds two live deterministic runs. `baseline.json` is the agent as committed. `regression.json` was taken after one edit: the annual refund window in the grounding facts changed from 14 days to 15. Comparing the two prints what that edit cost:

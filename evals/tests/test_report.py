@@ -10,6 +10,7 @@ import pytest
 from harness.report import (
     CaseResult,
     Report,
+    collapse_attempts,
     compare,
     compute_delta,
     format_delta,
@@ -17,6 +18,7 @@ from harness.report import (
     previous_report,
     served_models,
     summarize,
+    unstable_cases,
     write_report,
 )
 
@@ -153,3 +155,40 @@ def test_readme_example_matches_saved_pair(monkeypatch: pytest.MonkeyPatch) -> N
     printed = readme[start : readme.index("```", start)]
     expected = compare(Path("evals/examples/baseline.json"), Path("evals/examples/regression.json"))
     assert printed == "\n".join(expected) + "\n"
+
+
+def test_a_single_attempt_run_is_left_alone() -> None:
+    results = [case("a", "edge", "passed"), case("b", "edge", "failed")]
+    assert collapse_attempts(results) == results
+
+
+def test_a_case_passes_only_if_every_attempt_passed() -> None:
+    results = [case("a", "edge", "passed"), case("a", "edge", "passed"), case("a", "edge", "passed")]
+    [a] = collapse_attempts(results)
+    assert (a.outcome, a.attempts, a.passes, a.score) == ("passed", 3, 3, 1.0)
+
+
+def test_a_case_that_holds_two_times_in_three_is_failed_and_listed_as_unstable() -> None:
+    results = [case("a", "edge", "passed"), case("a", "edge", "failed"), case("a", "edge", "passed")]
+    [a] = collapse_attempts(results)
+    assert (a.outcome, a.attempts, a.passes) == ("failed", 3, 2)
+    assert a.score == 0.6667
+
+    r = as_dict(report(collapse_attempts(results)))
+    assert unstable_cases(r["cases"]) == ["a 2/3"]
+    assert "unstable: a 2/3" in format_report(r, Path("x.json"))
+
+
+def test_a_consistently_failing_case_is_not_unstable() -> None:
+    results = [case("a", "edge", "failed"), case("a", "edge", "failed")]
+    r = as_dict(report(collapse_attempts(results)))
+    assert unstable_cases(r["cases"]) == []
+
+
+def test_throttled_attempts_do_not_count_against_a_case() -> None:
+    results = [case("a", "edge", "passed"), case("a", "edge", "rate_limited")]
+    [a] = collapse_attempts(results)
+    assert (a.outcome, a.passes) == ("passed", 1)
+
+    [b] = collapse_attempts([case("b", "edge", "unavailable"), case("b", "edge", "unavailable")])
+    assert (b.outcome, b.passes) == ("unavailable", None)

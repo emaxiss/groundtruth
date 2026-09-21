@@ -50,4 +50,7 @@ def client(app_url: str, request: pytest.FixtureRequest) -> Iterator[httpx.Clien
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if "case" in metafunc.fixturenames:
-        metafunc.parametrize("case", CASES, ids=[c.id for c in CASES])
+        n = config.repeats()
+        runs = [(c, i) for c in CASES for i in range(1, n + 1)]
+        ids = [c.id if n == 1 else f"{c.id}#{i}" for c, i in runs]
+        metafunc.parametrize("case", [c for c, _ in runs], ids=ids)
