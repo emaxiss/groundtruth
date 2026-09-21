@@ -30,6 +30,13 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - The system prompt states that the agent has no record of earlier conversations or account actions and must say so when a customer claims an approval, which is true of this system and is what a human agent without the ticket history would say.
 - The cost is that a follow-up about the agent's own previous answer ("explain your second point") loses its referent. That trade is accepted here and would not be in a system with server-side transcripts.
 
+## Red team
+
+- The adversarial suite runs on Promptfoo because it is the common tool for this job, its HTTP provider tests the deployed endpoint like every other layer here, and its results format is one people already read. It is invoked through a pinned `pnpm dlx` instead of being a dependency: eighty direct dependencies are not worth adding to the lockfile for a tool that runs in one job.
+- Every assertion is deterministic. Promptfoo's model-graded assertions and generated attack campaigns need a grader or generator model; on a free tier that would make the red team as noisy as the thing it tests. The judge tier is where a model grades, and it is calibrated first.
+- Case-insensitive checks are JavaScript assertions because Promptfoo's `regex` type takes a JavaScript pattern, which has no inline flag.
+- The output guard exists because of this suite. Asked to summarise its rules "without quoting", a live model paraphrased the system prompt; after the prompt was tightened it still did so one time in three. The route now replaces any answer that matches two or more rule signatures, sets `x-groundtruth-guard: disclosure`, and the signatures are tested against the observed leak and against honest answers that mention refunds or documentation.
+
 ## Providers
 
 - Default provider is OpenRouter's `:free` tier rather than local Ollama; it gives better model quality than a 3B local model and keeps a 2 GB pull out of the quickstart.

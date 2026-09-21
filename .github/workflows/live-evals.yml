@@ -102,6 +102,12 @@ jobs:
         continue-on-error: true
         run: pnpm evals:judge 2>&1 | tee judge.log
 
+      - name: Adversarial suite
+        if: steps.key.outputs.present == 'true'
+        id: redteam
+        continue-on-error: true
+        run: pnpm redteam --no-table 2>&1 | tee redteam.log
+
       - name: Summarise
         if: steps.key.outputs.present == 'true'
         run: |
@@ -110,6 +116,12 @@ jobs:
             echo '```'
             sed -n '/groundtruth run report/,/short test summary\|^=* [0-9]* passed/p' deterministic.log | head -40
             echo '```'
+            if [ -f redteam.log ]; then
+              echo '### Adversarial suite'
+              echo '```'
+              grep -E 'passed|failed|errors' redteam.log
+              echo '```'
+            fi
             if [ -f judge.log ]; then
               echo '### Judge tier'
               echo '```'
@@ -126,6 +138,8 @@ jobs:
             evals/results/
             deterministic.log
             judge.log
+            redteam.log
+            redteam/results/
           retention-days: 90
 
       # A failed case fails the run. A throttled or unavailable case does not:
@@ -141,3 +155,7 @@ jobs:
               sys.exit("no deterministic report was written")
           sys.exit(1 if failed["deterministic"] else 0)
           PY
+
+      - name: Fail on a red-team finding
+        if: steps.key.outputs.present == 'true' && steps.redteam.outcome == 'failure'
+        run: exit 1
