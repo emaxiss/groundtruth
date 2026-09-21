@@ -11,6 +11,8 @@ os.environ.setdefault("DEEPEVAL_TELEMETRY_OPT_OUT", "1")
 # off two of nine cases on a run where a passing case took 167 s. The judge's
 # own retry budget (harness/judge.py) fits inside this figure.
 os.environ.setdefault("DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE", "300")
+from collections.abc import Iterator
+
 import httpx
 import pytest
 
@@ -26,7 +28,7 @@ def app_url() -> str:
 
 
 @pytest.fixture(scope="session")
-def client(app_url: str, request: pytest.FixtureRequest) -> httpx.Client:
+def client(app_url: str, request: pytest.FixtureRequest) -> Iterator[httpx.Client]:
     with httpx.Client(base_url=app_url, timeout=httpx.Timeout(60.0, connect=5.0)) as c:
         try:
             health = c.get("/api/health")

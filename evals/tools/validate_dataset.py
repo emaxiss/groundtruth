@@ -12,6 +12,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 DATASET = Path(__file__).resolve().parents[1] / "dataset.jsonl"
 
@@ -51,7 +52,7 @@ EXPECTED_KEYS = {
 }
 
 
-def problems_for(case: dict, line_no: int) -> list[str]:
+def problems_for(case: dict[str, Any], line_no: int) -> list[str]:
     errs: list[str] = []
     where = f"line {line_no} ({case.get('id', '?')})"
 
@@ -130,7 +131,7 @@ def main() -> int:
         print(f"missing {DATASET}", file=sys.stderr)
         return 1
 
-    cases: list[dict] = []
+    cases: list[dict[str, Any]] = []
     errors: list[str] = []
     for line_no, raw in enumerate(DATASET.read_text(encoding="utf-8").splitlines(), start=1):
         if not raw.strip():
@@ -144,7 +145,7 @@ def main() -> int:
         cases.append(case)
         errors.extend(problems_for(case, line_no))
 
-    ids = [c.get("id") for c in cases]
+    ids = [str(c.get("id")) for c in cases]
     dupes = sorted({i for i, n in Counter(ids).items() if n > 1})
     if dupes:
         errors.append(f"duplicate ids: {dupes}")

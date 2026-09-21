@@ -13,15 +13,16 @@ export class ChatPage {
   readonly agentMessages: Locator;
 
   constructor(readonly page: Page) {
-    this.input = page.getByTestId('chat-input');
-    this.send = page.getByTestId('chat-send');
-    this.empty = page.getByTestId('chat-empty');
-    this.loading = page.getByTestId('chat-loading');
-    this.error = page.getByTestId('chat-error');
+    const panel = page.getByRole('tabpanel', { name: 'chat' });
+    this.input = panel.getByRole('textbox', { name: 'Message', exact: true });
+    this.send = panel.getByRole('button', { name: /^send/i });
+    this.empty = panel.getByText('No messages yet.', { exact: false });
+    this.loading = panel.getByRole('status');
+    this.error = panel.getByRole('alert');
     this.validation = page.getByTestId('chat-validation');
     this.charCount = page.getByTestId('chat-charcount');
-    this.userMessages = page.getByTestId('msg-user');
-    this.agentMessages = page.getByTestId('msg-agent');
+    this.userMessages = panel.getByRole('article', { name: 'Customer message' });
+    this.agentMessages = panel.getByRole('article', { name: 'Agent reply' });
   }
 
   /** Types a message and submits with the button. */

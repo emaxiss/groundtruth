@@ -14,6 +14,13 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - The browser suite is written against page objects and custom fixtures so a spec reads as a user flow and a markup change is a one-file edit; the `api` fixture stubs the app's API from the browser side for error states no fake model produces.
 - Every `GROUNDTRUTH_*` variable is read in `lib/env.ts` and input limits live in `lib/limits.ts`, so the env contract and the client-side copy each have one source and cannot drift from the schemas.
 - The harness is a package (`evals/harness/`) with suites, unit tests, and tools in their own folders; `conftest.py` only sets DeepEval's environment and provides fixtures, and the report hooks are a named pytest plugin.
+- The API contract runs as a Playwright project on the `request` fixture rather than a standalone script, so it shares the web server, the reporters, and the JUnit output with the browser suite and needs no browser installed.
+- Browser locators are roles and labels first, test ids only where the UI has no accessible handle; a locator that needs an accessible name is how two missing names were found and added. Every view is scanned with axe at WCAG 2.1 AA under reduced motion, which caught label text at 2.5:1 contrast; the `faint` and `dim` tokens were raised to pass on all three surfaces.
+- The browser suite runs on Chromium, Firefox, WebKit, and a mobile viewport. The app is small enough that the full matrix costs about fifteen seconds.
+- Coverage is a gate, not a report: Vitest fails under 90% lines and 80% branches for `lib/` and `app/api/`, and the harness fails under 85%. `harness/reporting.py` is excluded because a pytest plugin's hooks only run inside a session, and it is exercised by every tier run.
+- The harness is type-checked with mypy in strict mode; DeepEval is untyped, so its imports are skipped rather than the strictness lowered.
+- A unit test reads `lib/schemas.ts`, `lib/prompts.ts`, and the client and fails when the harness's copy of the triage enums, the disclaimer, or the model header drifts from the app's.
+- CI builds the app once and the contract, browser, and eval jobs run that artifact, so they test the same bytes and the build cost is paid once.
 - Python is linted and formatted with ruff in CI at a 120-column limit; rubric text and verbatim model phrasings are exempt from the line limit because wrapping them would change what is being asserted.
 
 ## Providers
