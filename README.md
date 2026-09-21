@@ -10,23 +10,23 @@ Shipping an LLM feature is easy; knowing whether it still works after a prompt e
 
 ## Status
 
-| Component                                                          | State   |
-| ------------------------------------------------------------------ | ------- |
-| Docs corpus + grounding block                                      | Working |
-| Provider-agnostic LLM client                                       | Working |
-| Chat endpoint and UI                                               | Working |
-| Deterministic fake mode                                            | Working |
-| Unit tests (Vitest)                                                | Working |
-| CI: format, lint, typecheck, test, build, dataset, contract, evals | Working |
-| Ticket triage (structured output)                                  | Working |
-| Golden dataset (30 cases)                                          | Working |
-| Eval harness, deterministic tier                                   | Working |
-| Run reports with run-over-run delta                                | Working |
-| Live-model verification                                            | Working |
-| Eval harness, judge tier (DeepEval)                                | Working |
-| Playwright E2E suite                                               | Planned |
+| Component                                                               | State   |
+| ----------------------------------------------------------------------- | ------- |
+| Docs corpus + grounding block                                           | Working |
+| Provider-agnostic LLM client                                            | Working |
+| Chat endpoint and UI                                                    | Working |
+| Deterministic fake mode                                                 | Working |
+| Unit tests (Vitest)                                                     | Working |
+| CI: format, lint, typecheck, test, build, dataset, contract, e2e, evals | Working |
+| Ticket triage (structured output)                                       | Working |
+| Golden dataset (30 cases)                                               | Working |
+| Eval harness, deterministic tier                                        | Working |
+| Run reports with run-over-run delta                                     | Working |
+| Live-model verification                                                 | Working |
+| Eval harness, judge tier (DeepEval)                                     | Working |
+| Browser suite (Playwright)                                              | Working |
 
-The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one. The browser suite is not built; the table row is the only reference to it.
+The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one.
 
 ## Architecture
 
@@ -102,16 +102,16 @@ pnpm verify:contract
 
 Six layers, cheapest first.
 
-| Layer                                  | Runs against                          | Proves                                                                                         | Cannot prove                                                      |
-| -------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Unit tests (Vitest, `lib/`)            | Pure functions                        | The corpus budget, schemas, prompt assembly, fake fixtures, and the client's error mapping.    | Anything about HTTP, routing, or a real model.                    |
-| Route tests (Vitest, `app/api/`)       | Handlers, model mocked                | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400. | That the app boots, or that the fake model and the mock agree.    |
-| Contract verifier (`scripts/`)         | Built app, fake mode, over HTTP       | The deployed API honours its contract and is byte-identical across runs.                       | Anything a real model does.                                       |
-| Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP  | Thirty documented behaviours hold: numbers, refusals, classifications, boundaries.             | Answer quality, or that a passing regex means a good answer.      |
-| Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model | Answer relevancy, and correctness against each case's reference on a fixed rubric.             | Anything stable: it is a noisier instrument and is not a CI gate. |
-| Browser suite                          | Planned                               | The UI wires to the API and shows each state.                                                  | Not built.                                                        |
+| Layer                                  | Runs against                          | Proves                                                                                             | Cannot prove                                                      |
+| -------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Unit tests (Vitest, `lib/`)            | Pure functions                        | The corpus budget, schemas, prompt assembly, fake fixtures, and the client's error mapping.        | Anything about HTTP, routing, or a real model.                    |
+| Route tests (Vitest, `app/api/`)       | Handlers, model mocked                | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400.     | That the app boots, or that the fake model and the mock agree.    |
+| Contract verifier (`scripts/`)         | Built app, fake mode, over HTTP       | The deployed API honours its contract and is byte-identical across runs.                           | Anything a real model does.                                       |
+| Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP  | Thirty documented behaviours hold: numbers, refusals, classifications, boundaries.                 | Answer quality, or that a passing regex means a good answer.      |
+| Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model | Answer relevancy, and correctness against each case's reference on a fixed rubric.                 | Anything stable: it is a noisier instrument and is not a CI gate. |
+| Browser suite (Playwright, `e2e/`)     | Built app, fake mode, headless Chrome | The UI sends what the user typed, renders each answer, and shows every validation and error state. | Anything a real model does.                                       |
 
-The first four run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
+All but the judge tier run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
 
 ## Eval design
 
@@ -164,6 +164,7 @@ app/           Next.js App Router: UI and API routes
 lib/           LLM client, prompts, zod schemas, corpus loader, unit tests
 docs-corpus/   Twelve markdown files the grounding block is compiled from
 scripts/       Grounding budget check, black-box contract verifier
+e2e/           Playwright browser suite against the built app in fake mode
 evals/         Golden dataset, validation script, pytest harness, run reports
 evals/examples Baseline and regression run pair behind the worked example
 docs/results/  Two checked-in live run reports, referenced from Limitations
