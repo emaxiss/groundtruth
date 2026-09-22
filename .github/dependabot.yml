@@ -4,6 +4,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: tuesday
     # Only propose versions that have been public for a week. A release that
     # is pulled or found malicious usually is within days, and the updater's
     # own installer rejects versions younger than its release-age floor.
@@ -24,9 +25,11 @@ updates:
     directory: /evals
     schedule:
       interval: weekly
+      day: tuesday
     cooldown:
       default-days: 7
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: tuesday
