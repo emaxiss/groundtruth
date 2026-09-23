@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-labelledby="t d">
+  <title id="t">groundtruth</title>
+  <desc id="d">An AI support agent and the harness that proves it works. A run report shows one new failure, edge-002, after a one-line edit to the refund window.</desc>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#24312f" stroke-width="1" opacity="0.45"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.18" cy="0.2" r="0.7">
+      <stop offset="0" stop-color="#4ade9b" stop-opacity="0.13"/>
+      <stop offset="1" stop-color="#4ade9b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0.45" stop-color="#0b0f0e" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0b0f0e" stop-opacity="0.6"/>
+    </linearGradient>
+    <clipPath id="frame"><rect width="1200" height="400" rx="18"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace">
+    <rect width="1200" height="400" fill="#0b0f0e"/>
+    <rect width="1200" height="400" fill="url(#grid)"/>
+    <rect width="1200" height="400" fill="url(#glow)"/>
+    <rect width="1200" height="400" fill="url(#fade)"/>
+
+    <!-- wordmark -->
+    <circle cx="71" cy="76" r="6" fill="#4ade9b"/>
+    <circle cx="71" cy="76" r="11" fill="none" stroke="#4ade9b" stroke-opacity="0.35"/>
+    <text x="92" y="83" font-size="21" font-weight="600" fill="#4ade9b" letter-spacing="1">groundtruth</text>
+
+    <!-- headline -->
+    <text font-size="38" font-weight="700" fill="#dfe7e4" letter-spacing="-0.5">
+      <tspan x="62" y="150">An AI support agent,</tspan>
+      <tspan x="62" y="198">and the harness that</tspan>
+      <tspan x="62" y="246" fill="#4ade9b">proves it works.</tspan>
+    </text>
+
+    <!-- stat tiles -->
+    <g font-size="12" fill="#9bb0aa">
+      <rect x="62" y="286" width="138" height="66" rx="10" fill="#111716" stroke="#24312f"/>
+      <text x="78" y="317" font-size="24" font-weight="700" fill="#dfe7e4">36</text>
+      <text x="78" y="339">golden cases</text>
+
+      <rect x="210" y="286" width="138" height="66" rx="10" fill="#111716" stroke="#24312f"/>
+      <text x="226" y="317" font-size="24" font-weight="700" fill="#dfe7e4">24</text>
+      <text x="226" y="339">red-team attacks</text>
+
+      <rect x="358" y="286" width="138" height="66" rx="10" fill="#111716" stroke="#24312f"/>
+      <text x="374" y="317" font-size="24" font-weight="700" fill="#dfe7e4">16/16</text>
+      <text x="374" y="339">judge agreement</text>
+
+      <rect x="506" y="286" width="138" height="66" rx="10" fill="#111716" stroke="#24312f"/>
+      <text x="522" y="317" font-size="24" font-weight="700" fill="#dfe7e4">4</text>
+      <text x="522" y="339">browsers + axe</text>
+    </g>
+
+    <!-- run report panel -->
+    <rect x="684" y="52" width="454" height="300" rx="12" fill="#111716" stroke="#24312f"/>
+    <path d="M684 88H1138" stroke="#24312f"/>
+    <circle cx="706" cy="70" r="5" fill="#f2545b" opacity="0.85"/>
+    <circle cx="724" cy="70" r="5" fill="#e8a13a" opacity="0.85"/>
+    <circle cx="742" cy="70" r="5" fill="#4ade9b" opacity="0.85"/>
+    <text x="764" y="75" font-size="13" fill="#788c87">run report · delta vs baseline</text>
+
+    <g font-size="14">
+      <text x="708" y="122" fill="#9bb0aa">tier: deterministic · 30 cases</text>
+
+      <g fill="#dfe7e4">
+        <text x="708" y="158">adversarial</text>
+        <text x="708" y="184">edge</text>
+        <text x="708" y="210">factual</text>
+        <text x="708" y="236">out_of_scope</text>
+        <text x="708" y="262">triage</text>
+      </g>
+
+      <g fill="#4ade9b">
+        <g id="bar-full">
+          <rect x="836" y="149" width="32" height="10" rx="2"/>
+          <rect x="872" y="149" width="32" height="10" rx="2"/>
+          <rect x="908" y="149" width="32" height="10" rx="2"/>
+          <rect x="944" y="149" width="32" height="10" rx="2"/>
+          <rect x="980" y="149" width="32" height="10" rx="2"/>
+          <rect x="1016" y="149" width="32" height="10" rx="2"/>
+        </g>
+        <rect x="836" y="175" width="32" height="10" rx="2"/>
+        <rect x="872" y="175" width="32" height="10" rx="2"/>
+        <rect x="908" y="175" width="32" height="10" rx="2"/>
+        <rect x="944" y="175" width="32" height="10" rx="2"/>
+        <rect x="980" y="175" width="32" height="10" rx="2"/>
+        <rect x="1016" y="175" width="32" height="10" rx="2" fill="#f2545b"/>
+        <use href="#bar-full" y="52"/>
+        <use href="#bar-full" y="78"/>
+        <use href="#bar-full" y="104"/>
+      </g>
+
+      <g fill="#9bb0aa" text-anchor="end">
+        <text x="1114" y="158">6/6</text>
+        <text x="1114" y="184" fill="#e8a13a">5/6</text>
+        <text x="1114" y="210">6/6</text>
+        <text x="1114" y="236">6/6</text>
+        <text x="1114" y="262">6/6</text>
+      </g>
+
+      <path d="M708 282H1114" stroke="#24312f" stroke-dasharray="3 4"/>
+      <text x="708" y="308" fill="#9bb0aa">new failures: <tspan fill="#f2545b" font-weight="700">edge-002</tspan></text>
+      <text x="708" y="334" fill="#9bb0aa">overall: 100.0% <tspan fill="#788c87">→</tspan> <tspan fill="#e8a13a" font-weight="700">96.7%</tspan></text>
+    </g>
+  </g>
+</svg>
