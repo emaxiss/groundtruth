@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+.coverage
+.coverage.*
 
 # next.js
 /.next/
@@ -33,7 +35,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-!evals/.env.example
 
 # python / evals
 __pycache__/
@@ -51,7 +52,6 @@ evals/results/
 
 # local dev artifacts
 temporary-screenshots/
-*.tsbuildinfo
 
 # vercel
 .vercel
