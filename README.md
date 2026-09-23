@@ -1,139 +1,96 @@
-# groundtruth
+<p align="center">
+  <img src="docs/hero.svg" width="100%" alt="groundtruth: an AI support agent, and the harness that proves it works. A run report shows one new failure, edge-002, after a one-line edit to the refund window.">
+</p>
 
-[![CI](https://github.com/emaxiss/groundtruth/actions/workflows/ci.yml/badge.svg)](https://github.com/emaxiss/groundtruth/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/emaxiss/groundtruth/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/emaxiss/groundtruth/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/emaxiss/groundtruth/actions/workflows/live-evals.yml"><img alt="Live evals" src="https://github.com/emaxiss/groundtruth/actions/workflows/live-evals.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-4ade9b?style=flat-square&labelColor=111716"></a>
+  <br>
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-dfe7e4?style=flat-square&logo=nextdotjs&logoColor=white&labelColor=111716">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square&logo=typescript&logoColor=white&labelColor=111716">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-e8a13a?style=flat-square&logo=python&logoColor=white&labelColor=111716">
+  <img alt="DeepEval" src="https://img.shields.io/badge/DeepEval-judge_tier-4ade9b?style=flat-square&labelColor=111716">
+  <img alt="Promptfoo" src="https://img.shields.io/badge/Promptfoo-red_team-f2545b?style=flat-square&labelColor=111716">
+  <img alt="Playwright" src="https://img.shields.io/badge/Playwright-4_browsers_+_axe-2ead33?style=flat-square&logo=playwright&logoColor=white&labelColor=111716">
+</p>
 
-An AI customer-support agent and the evaluation harness that grades it. The agent answers questions about TaskLoop, a fictional project-management SaaS, using only its documentation. The harness is the main body of the repo: written in Python, it tests the app black-box over HTTP as a separate stack.
+**groundtruth** is an AI customer-support agent and the evaluation harness that grades it. The agent answers questions about TaskLoop, a fictional project-management SaaS, using only its documentation. A separate Python harness tests it black-box over HTTP, so a prompt edit, a model swap, or a docs change shows up as a measured delta instead of a surprise in production.
 
-Shipping an LLM feature is easy; knowing whether it still works after a prompt edit, a model swap, or a docs change is the hard part. The pieces that answer that question: a golden dataset with an explicit taxonomy, deterministic assertions with no threshold to tune, DeepEval judge metrics behind a pytest marker, run-over-run regression tracking, and a black-box harness that reports which model actually answered.
+> [!TIP]
+> **Try it without an API key.** Fake mode serves deterministic answers, and it is what CI runs.
+>
+> ```bash
+> pnpm install
+> GROUNDTRUTH_FAKE_LLM=1 pnpm dev   # http://localhost:3000
+> ```
 
-![The chat interface answering a documented pricing question, then declining a prompt-injection attempt](docs/chat.png)
+<p align="center">
+  <img src="docs/chat.png" width="640" alt="The chat interface answering a documented pricing question, then declining a prompt-injection attempt">
+</p>
 
-## Status
+## How it works
 
-| Component                                                                | State   |
-| ------------------------------------------------------------------------ | ------- |
-| Docs corpus + grounding block                                            | Working |
-| Provider-agnostic LLM client                                             | Working |
-| Chat endpoint and UI                                                     | Working |
-| Deterministic fake mode                                                  | Working |
-| Unit tests (Vitest)                                                      | Working |
-| CI: one build shared by contract, e2e, and evals; coverage floors; JUnit | Working |
-| Ticket triage (structured output)                                        | Working |
-| Golden dataset (36 cases)                                                | Working |
-| Eval harness, deterministic tier                                         | Working |
-| Run reports with run-over-run delta                                      | Working |
-| Live-model verification                                                  | Working |
-| Eval harness, judge tier (DeepEval)                                      | Working |
-| Adversarial suite (Promptfoo)                                            | Working |
-| Browser suite (Playwright)                                               | Working |
+```mermaid
+flowchart TB
+  subgraph harness ["Python eval harness · pytest"]
+    direction LR
+    det["Deterministic tier<br/>regex + schema checks"]
+    jdg["Judge tier<br/>DeepEval"]
+    red["Red team<br/>Promptfoo"]
+  end
+  e2e["Browser suite<br/>Playwright + axe"]
+  app["Next.js app<br/>/api/chat · /api/triage · /api/health"]
+  llm[("Any OpenAI-compatible model<br/>or fake mode")]
+  judge[("Judge model")]
 
-The agent runs today, the deterministic tier of the harness gates every pull request, and each run reports its delta against the previous one.
+  harness -- "HTTP, black box" --> app
+  e2e --> app
+  app --> llm
+  jdg -. "scores answers with" .-> judge
 
-## Architecture
-
-```
-                    ┌────────────────────────┐
-                    │  Python eval harness   │
-                    │  pytest + DeepEval     │
-                    │                        │
-                    │  deterministic tier    │
-                    │  judge tier  (-m)      │
-                    │  run reports + delta   │
-                    └───────────┬────────────┘
-                                │ HTTP (black box)
-                                ▼
-   ┌──────────────────────────────────────────────┐
-   │  Next.js app (TypeScript, App Router)        │
-   │                                              │
-   │  /api/chat    /api/triage    /api/health     │
-   │       │                                      │
-   │  lib/llm/ ─────── GROUNDTRUTH_FAKE_LLM=1 ──┐  │
-   │       │                                   │  │
-   │  lib/corpus/ ← docs-corpus/*.md      fixtures│
-   └───────┼──────────────────────────────────────┘
-           │ OpenAI-compatible
-           ▼
-   ┌───────────────────┐
-   │  Any provider     │   OpenRouter, Ollama, …
-   │  base URL + model │   swapped by env only
-   └───────────────────┘
-```
-
-The harness talks to the app over HTTP and knows nothing about its internals. It tests the deployed contract, not the implementation, and it would catch a regression introduced anywhere between the route handler and the model.
-
-## Quickstart
-
-Requires Node 22+ and pnpm 10+.
-
-```bash
-pnpm install
-cp .env.example .env.local   # add an API key, or use fake mode below
-pnpm dev                     # http://localhost:3000
+  classDef tier fill:#172120,stroke:#4ade9b,color:#dfe7e4
+  classDef sut fill:#111716,stroke:#e8a13a,color:#dfe7e4,stroke-width:2px
+  classDef model fill:#0b0f0e,stroke:#9bb0aa,color:#dfe7e4
+  class det,jdg,red,e2e tier
+  class app sut
+  class llm,judge model
+  style harness fill:transparent,stroke:#4ade9b,stroke-dasharray:4 4,color:#4ade9b
 ```
 
-The default provider is OpenRouter over its OpenAI-compatible endpoint. Any provider works; swapping is an environment change, not a code change:
-
-```bash
-GROUNDTRUTH_BASE_URL=https://openrouter.ai/api/v1
-GROUNDTRUTH_MODEL=google/gemma-4-31b-it:free
-GROUNDTRUTH_API_KEY=sk-or-v1-...
-# optional: tried in order, client-side and by OpenRouter, when the primary errors or is throttled;
-# every response carries an x-groundtruth-model header naming the model that answered
-# every id must end in ":free" or the client refuses the call; opt in with
-# GROUNDTRUTH_ALLOW_PAID_MODELS=1
-GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free,nex-agi/nex-n2.5-pro:free
-
-# or run locally, offline, at zero cost:
-GROUNDTRUTH_BASE_URL=http://localhost:11434/v1
-GROUNDTRUTH_MODEL=qwen2.5:3b
-GROUNDTRUTH_API_KEY=ollama
-```
-
-### Running without a model
-
-`GROUNDTRUTH_FAKE_LLM=1` makes the LLM client return canned responses from a fixture map keyed by intent. The API and UI behave identically; responses are byte-identical across runs. This exists so the contract verifier and the eval harness can assert on exact output without a live model, and it is what CI runs:
-
-```bash
-pnpm build
-pnpm test:contract   # Playwright starts the built app in fake mode itself
-pnpm test:e2e
-```
+The harness knows nothing about the app's internals. It tests the deployed contract, so it catches a regression introduced anywhere between the route handler and the model, and every response names the model that actually served it.
 
 ## What each layer proves
 
-Seven layers, cheapest first.
+| Layer               | Tool                  | Runs                  | Proves                                                                          |
+| ------------------- | --------------------- | --------------------- | ------------------------------------------------------------------------------- |
+| Unit and route      | Vitest                | every PR              | Error mapping, schemas, prompt assembly, the disclaimer is always appended      |
+| Contract            | Playwright (requests) | every PR              | The built API honours its contract, byte-identical across runs                  |
+| Deterministic evals | pytest                | every PR, weekly live | 36 documented behaviours: figures, refusals, classifications, policy boundaries |
+| Judge evals         | DeepEval              | weekly live           | Answer relevancy, and correctness against a reference on a fixed rubric         |
+| Red team            | Promptfoo             | every PR, weekly live | 24 attacks end without a leaked prompt, an unauthorised promise, invented facts |
+| Browser             | Playwright + axe      | every PR              | Chromium, Firefox, WebKit, and mobile; every view passes WCAG 2.1 AA            |
 
-| Layer                                  | Runs against                                            | Proves                                                                                                                                        | Cannot prove                                                      |
-| -------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Unit tests (Vitest, `lib/`)            | Pure functions                                          | The corpus budget, schemas, prompt assembly, fake fixtures, and the client's error mapping.                                                   | Anything about HTTP, routing, or a real model.                    |
-| Route tests (Vitest, `app/api/`)       | Handlers, model mocked                                  | Every error kind maps to the right status; the disclaimer is always appended; bad JSON is 400.                                                | That the app boots, or that the fake model and the mock agree.    |
-| Contract suite (`tests/contract/`)     | Built app, fake mode, Playwright request fixture        | The deployed API honours its contract and is byte-identical across runs.                                                                      | Anything a real model does.                                       |
-| Deterministic eval tier (`evals/`)     | Running app, fake or live, over HTTP                    | Thirty-six documented behaviours hold: numbers, refusals, classifications, boundaries.                                                        | Answer quality, or that a passing regex means a good answer.      |
-| Judge eval tier (DeepEval, `-m judge`) | Running app, live, plus a judge model                   | Answer relevancy, and correctness against each case's reference on a fixed rubric.                                                            | Anything stable: it is a noisier instrument and is not a CI gate. |
-| Browser suite (`tests/e2e/`)           | Built app, fake mode; Chromium, Firefox, WebKit, mobile | The UI sends what the user typed, renders each answer, and shows every validation and error state., and every view passes axe at WCAG 2.1 AA. | Anything a real model does.                                       |
-| Adversarial suite (`redteam/`)         | Running app, fake or live, Promptfoo over HTTP          | Twenty-four attacks end without a leaked prompt, an unauthorised promise, a claimed action, or invented facts.                                | That a generated or adaptive attacker would fail.                 |
+Pull requests run everything except the judge tier, in fake mode, with no key and no network. A [scheduled workflow](.github/workflows/live-evals.yml) runs the eval tiers and the red team against live free-tier models every week.
 
-All but the judge tier run on every pull request with no key and no network. The run report from the fourth layer is what says whether the last edit cost anything.
+<details>
+<summary><b>What each layer cannot prove</b></summary>
 
-## Eval design
+<br>
 
-**Dataset taxonomy.** Thirty-six golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category, each chosen for a failure mode worth catching: `factual` (does it get documented numbers right), `triage` (does structured classification hold), `out_of_scope` (does it decline cleanly), `adversarial` (prompt injection, social engineering for undeserved refunds), `multi_turn` (follow-ups that depend on an earlier turn, an injection split across turns, a customer claiming an approval that never happened), and `edge` (boundary cases: a refund request at exactly 14 days, at exactly 48 hours, near-empty input). Boundaries are where policy language quietly fails, so the docs state windows inclusively and the dataset tests both sides.
+- **Unit and route tests** say nothing about HTTP, booting, or a real model.
+- **The contract suite and browser suite** run against the fake model, so they say nothing about what a real model does.
+- **The deterministic tier** proves a documented behaviour held, not that the answer was good. A passing regex is not a good answer.
+- **The judge tier** is a noisier instrument, which is why it is not a pull request gate.
+- **The red team** is twenty-four hand-written attacks, not a generated or adaptive campaign.
 
-**Deterministic first.** Most of what matters does not need an LLM to check. Disclaimer presence, schema validity, refusal behaviour, and absence of undocumented promises are regex and parser assertions: fast, free, and deterministic for a given response. These are hard failures with no threshold to tune. Assertion text is normalised for typographic whitespace and dashes first, because a model that writes "7 days" with a narrow no-break space has not got the fact wrong.
+</details>
 
-**Judge tier second, not a gate.** Answer quality is scored by [DeepEval](https://github.com/confident-ai/deepeval) metrics: `AnswerRelevancyMetric` on every judged case, and a `GEval` correctness metric against the `reference` each factual case carries, with a four-level rubric fixed in [`evals/harness/judge.py`](evals/harness/judge.py). The judge model is a different family from the agent, driven through a `DeepEvalBaseLLM` subclass that enforces JSON mode and the same free-model rule as the app. Thresholds were set from nine calibration runs, documented in [`evals/README.md`](evals/README.md). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a fully deterministic CI gate and the judge tier is a separate, noisier signal that needs a key.
+## A regression, caught
 
-**Regression tracking.** Each run writes a timestamped JSON of per-case outcomes and per-category pass rates under `evals/results/`, and prints the delta against the previous run of the same tier and model: new failures, fixed cases, and the rate change per category. The format is documented in [`evals/README.md`](evals/README.md).
+[`evals/examples/`](evals/examples/) holds two live runs. Between them, one line changed: the annual refund window in the grounding facts went from 14 days to 15. The run report names exactly what that cost.
 
-**Red team.** [`redteam/promptfooconfig.yaml`](redteam/promptfooconfig.yaml) is a [Promptfoo](https://github.com/promptfoo/promptfoo) suite of 24 attacks over HTTP: instruction override, claimed authority, prompt extraction (verbatim, by translation, by summary), social engineering for refunds and discounts, instructions hidden in pasted content, obfuscation, harmful and out-of-scope requests, another customer's data, actions the agent cannot take, and hallucination bait. Every assertion is a regex or a string check, so a failure is a finding and not a grader's opinion. It runs in CI against the fake model and against the live models on the schedule. Its first live run found that the agent would summarise its own rules when asked not to quote them; the fix was an output guard ([`lib/guardrails.ts`](lib/guardrails.ts)), because a reworded prompt still leaked one time in three.
-
-**Stability and drift.** `GROUNDTRUTH_EVAL_REPEATS` runs each case several times and the report lists the cases that did not hold every time, because a single live pass says little about a sampled system. A scheduled workflow ([`live-evals.yml`](.github/workflows/live-evals.yml)) runs both tiers against the live free-tier models weekly, fails only on scored failures, and keeps the run reports as artifacts. The judge itself is checked against sixteen answers of known quality before its scores are trusted.
-
-**Black box over HTTP.** The harness is a separate stack in a separate language, which forces it to test the contract rather than reach into internals. It is also how the system will actually be consumed. Provider rate limiting is raised as its own outcome rather than scored as a failed case, so a throttled run cannot masquerade as a regression. Every response names the model that served it, and the run report counts them, because with fallback routing on that is the only way to know what a run measured.
-
-**Worked example.** [`evals/examples/`](evals/examples/) holds two live deterministic runs. `baseline.json` is the agent as committed. `regression.json` was taken after one edit: the annual refund window in the grounding facts changed from 14 days to 15. Comparing the two prints what that edit cost:
-
-```
+```text
 $ python3 evals/harness/report.py evals/examples/baseline.json evals/examples/regression.json
 report: evals/examples/regression.json
 tier: deterministic · model: google/gemma-4-31b-it:free · 30 cases · 29 passed, 1 failed · pass rate 96.7%
@@ -150,21 +107,70 @@ delta vs baseline.json:
   edge: 100.0% -> 83.3% (-16.7)
 ```
 
-The pair was taken when the dataset had thirty cases. One case flipped. `edge-002`, a customer 15 days after purchase, was told they still qualified; its pair `edge-001`, at day 14, kept passing. Boundary cases come in pairs so that a window edit shows up as a delta on one side. The `served by:` line differs between the runs because the client rotates through its routing list when a free model is overloaded. A unit test checks that the block above is the output of the command on the checked-in files.
+`edge-002`, a customer on day 15, was told they still qualified. Its pair, `edge-001` on day 14, kept passing. Boundary cases come in pairs so that a window edit shows up on one side. The pair was recorded before the six multi-turn cases were added, and a unit test checks that the block above is the real output of the command.
 
-**Retrieval.** Retrieval is not implemented; the grounding block is a curated fact list compiled from `docs-corpus/`. If retrieval is added, the retrieved chunks are the context a faithfulness metric needs, and that metric attaches to the existing cases without the dataset changing.
+## Running against a real model
+
+Requires Node 22+ and pnpm 10+. The default provider is OpenRouter, and switching to any other OpenAI-compatible provider only takes environment variables.
+
+```bash
+cp .env.example .env.local   # then set the key
+pnpm dev
+```
+
+<details>
+<summary><b>Provider configuration</b></summary>
+
+<br>
+
+```bash
+GROUNDTRUTH_BASE_URL=https://openrouter.ai/api/v1
+GROUNDTRUTH_MODEL=google/gemma-4-31b-it:free
+GROUNDTRUTH_API_KEY=sk-or-v1-...
+# Tried in order when the primary errors or is throttled. Every id must end in ":free"
+# unless GROUNDTRUTH_ALLOW_PAID_MODELS=1. Responses name the serving model in x-groundtruth-model.
+GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free,nex-agi/nex-n2.5-pro:free
+
+# Or run fully offline with Ollama:
+GROUNDTRUTH_BASE_URL=http://localhost:11434/v1
+GROUNDTRUTH_MODEL=qwen2.5:3b
+GROUNDTRUTH_API_KEY=ollama
+```
+
+Every variable is described in [`.env.example`](.env.example). Running the eval tiers against a live app is covered in [`evals/README.md`](evals/README.md).
+
+</details>
+
+## Eval design
+
+<details>
+<summary><b>Dataset, tiers, red team, and drift</b></summary>
+
+<br>
+
+- **Dataset.** 36 golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category: `factual`, `triage`, `out_of_scope`, `adversarial`, `multi_turn`, and `edge`. Each case targets a failure mode worth catching, and boundaries such as exactly 14 days or exactly 48 hours are tested on both sides.
+- **Deterministic first.** Disclaimers, schema validity, refusals, and the absence of undocumented promises are regex and parser checks: fast, free, and with no threshold to tune. Text is normalised for typographic spaces and dashes before matching.
+- **Judge second.** [DeepEval](https://github.com/confident-ai/deepeval) scores answer relevancy and a `GEval` correctness metric against each case's reference, on a rubric fixed in [`evals/harness/judge.py`](evals/harness/judge.py). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a deterministic gate. The judge is checked against sixteen answers of known quality before its scores are trusted, and its thresholds come from calibration runs documented in [`evals/README.md`](evals/README.md).
+- **Red team.** A [Promptfoo](https://github.com/promptfoo/promptfoo) suite in [`redteam/`](redteam/promptfooconfig.yaml) covers instruction override, claimed authority, prompt extraction, refund social engineering, hidden instructions, obfuscation, and hallucination bait. Its first live run found the agent would summarise its own rules, which led to the output guard in [`lib/guardrails.ts`](lib/guardrails.ts).
+- **Honest outcomes.** A throttled or unavailable provider is reported as its own outcome, not as a failed case. Repeated runs list the cases that did not hold every time, and each run prints its delta against the previous one.
+
+</details>
 
 ## Limitations
 
-- **The judge is a small free model.** DeepEval's metrics are only as good as the model behind them; this one separates a wrong figure from a missing detail reliably over three calibration runs, and is not a substitute for a frontier judge. The thresholds are statements about this judge, not about the agent.
-- **The live results come from one provider and few runs.** Two live reports are checked in under [`docs/results/`](docs/results/). The 30/30 run was served entirely by the fallback model, `nvidia/nemotron-3-super-120b-a12b:free`, because the free pool for the configured default was saturated. The earlier 25/30 run predates the served-model header, so which model answered it is unknown. Neither is a claim about `google/gemma-4-31b-it:free` specifically, and these prompts have not been exercised against a frontier model or across providers.
-- **Free-tier providers are unreliable as well as rate limited.** Upstream capacity errors arrive as a 200 with no completion in it, and the shared free pool for a given model is often saturated. The client rotates through its routing list itself, two passes, because provider-side routing does not step in on those errors; a case where every model fails is recorded as `unavailable`, not as a failed case. A live run reports which model actually served each case for the same reason.
-- **Free-tier providers are rate limited.** OpenRouter's free tier allows about 20 requests a minute and 50 a day without credits (1,000 a day with credits on the account). A paced deterministic run fits under the per-minute ceiling; two runs in a day do not fit under the daily one. The client distinguishes a 429 from a model failure so rate limiting cannot masquerade as a failed eval case, and the harness reports throttled cases separately from failed ones.
-- **No RAG, no persistence, no auth.** Tickets are not stored. The corpus is twelve markdown files. This is scoped as an evaluation target, not a support product.
-- **Conversations are not stored.** The chat API takes earlier turns from the client, and only the customer's turns are forwarded to the model. An agent turn sent by a client cannot be verified, and a forged one promising a refund was honoured by a live model before this rule existed; the `multi-004` case found it. A production system would keep the transcript server-side.
-- **Guardrails are mostly prompt-level.** The one exception is an output guard that replaces an answer describing the agent's own rules. There is no separate classifier or moderation layer. The adversarial cases and the red-team suite measure how far that defence actually goes, which is a narrower claim than "the agent is safe", and twenty-four hand-written attacks are not a generated campaign.
+> [!NOTE]
+>
+> - **The judge is a small free model.** Its thresholds are statements about this judge, not about the agent, and it is no substitute for a frontier judge.
+> - **Live results come from one provider and few runs.** The checked-in reports in [`docs/results/`](docs/results/) name the model that served every case.
+> - **No retrieval, persistence, or auth.** The grounding block is a curated fact list compiled from twelve markdown files, and conversations are not stored.
+> - **Guardrails are mostly prompt-level,** plus one output guard. The adversarial cases measure how far that goes, which is a narrower claim than "the agent is safe".
+>
+> The reasoning behind each trade-off is in [DECISIONS.md](DECISIONS.md).
 
-## Repository layout
+<details>
+<summary><b>Repository layout</b></summary>
+
+<br>
 
 ```
 app/                    Next.js App Router
@@ -194,10 +200,8 @@ docs/results/           Two checked-in live run reports, referenced from Limitat
 DECISIONS.md            Design decisions and their reasoning
 ```
 
+</details>
+
 ## Contributing
 
-Setup, the full check list, and where new code goes are in [CONTRIBUTING.md](CONTRIBUTING.md). Vulnerability reports go through [SECURITY.md](SECURITY.md).
-
-## License
-
-MIT
+Setup, the full check list, and where new code goes are in [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities through [SECURITY.md](SECURITY.md). Licensed under [MIT](LICENSE).
