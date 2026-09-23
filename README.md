@@ -25,14 +25,16 @@
 > GROUNDTRUTH_FAKE_LLM=1 pnpm dev   # http://localhost:3000
 > ```
 
-<img src="docs/chat.png" width="100%" alt="The chat interface answering a documented pricing question, then declining a prompt-injection attempt">
+<p align="center">
+  <img src="docs/chat.png" width="640" alt="The chat interface answering a documented pricing question, then declining a prompt-injection attempt">
+</p>
 
 ## How it works
 
 ```mermaid
-flowchart LR
-  subgraph harness ["Python eval harness"]
-    direction TB
+flowchart TB
+  subgraph harness ["Python eval harness · pytest"]
+    direction LR
     det["Deterministic tier<br/>regex + schema checks"]
     jdg["Judge tier<br/>DeepEval"]
     red["Red team<br/>Promptfoo"]
@@ -42,12 +44,10 @@ flowchart LR
   llm[("Any OpenAI-compatible model<br/>or fake mode")]
   judge[("Judge model")]
 
-  det -- "HTTP, black box" --> app
-  jdg -- "HTTP, black box" --> app
-  red -- "HTTP, black box" --> app
+  harness -- "HTTP, black box" --> app
   e2e --> app
   app --> llm
-  jdg -.-> judge
+  jdg -. "scores answers with" .-> judge
 
   classDef tier fill:#172120,stroke:#4ade9b,color:#dfe7e4
   classDef sut fill:#111716,stroke:#e8a13a,color:#dfe7e4,stroke-width:2px
