@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from pathlib import Path
 
 import httpx
 import pytest
@@ -110,3 +112,24 @@ def test_goldens_are_the_chat_cases_with_a_reference() -> None:
     assert all(i.startswith(("factual-", "edge-")) for i in ids)
     assert all(g.expected_output for g in goldens)
     assert {g.additional_metadata["category"] for g in goldens} == {"factual", "edge"}
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def routing(source: Path, prefix: str) -> set[str]:
+    """Primary plus fallbacks for `prefix` (`GROUNDTRUTH` or `GROUNDTRUTH_JUDGE`) as a config file sets them."""
+    text = source.read_text(encoding="utf-8")
+    models: set[str] = set()
+    for key in (f"{prefix}_MODEL", f"{prefix}_FALLBACK_MODELS"):
+        match = re.search(rf"^\s*{key}\s*[=:]\s*(\S+)", text, re.MULTILINE)
+        assert match, f"{key} is not set in {source.name}"
+        models.update(m for m in match.group(1).split(",") if m)
+    return models
+
+
+@pytest.mark.parametrize("source", [".env.example", ".github/workflows/live-evals.yml"])
+def test_the_judge_never_shares_a_model_with_the_agent(source: str) -> None:
+    path = ROOT / source
+    shared = routing(path, "GROUNDTRUTH") & routing(path, "GROUNDTRUTH_JUDGE")
+    assert not shared, f"{source}: the judge could grade answers from {sorted(shared)}"

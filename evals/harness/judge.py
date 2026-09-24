@@ -1,9 +1,9 @@
 """DeepEval judge tier: answer relevancy and correctness against a reference.
 
 The judge model is an OpenRouter model behind `DeepEvalBaseLLM`, so every
-DeepEval metric can drive it. It is a different model family from the agent
-and is subject to the same free-model rule as the app: a paid judge is
-refused unless explicitly opted into.
+DeepEval metric can drive it. Its routing list shares no model with the
+agent's, and it is subject to the same free-model rule as the app: a paid
+judge is refused unless explicitly opted into.
 """
 
 from __future__ import annotations
