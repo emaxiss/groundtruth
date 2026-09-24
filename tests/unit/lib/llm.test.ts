@@ -1,10 +1,14 @@
+import { APIConnectionTimeoutError } from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { assertModelsAllowed, complete, fallbackModels, isFreeModel } from '@/lib/llm';
 
 // vi.mock is hoisted above the imports; vi.hoisted keeps the spy in scope.
+// Only the client is replaced: the SDK's error classes stay real, so the
+// tests throw exactly what the SDK throws.
 const { create } = vi.hoisted(() => ({ create: vi.fn() }));
-vi.mock('openai', () => ({
+vi.mock('openai', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   default: class {
     chat = { completions: { create } };
   },
@@ -207,12 +211,19 @@ describe('rotation', () => {
   });
 
   it('rotates on a timeout as well as an upstream error', async () => {
-    const timeout = Object.assign(new Error('timed out'), { name: 'APIConnectionTimeoutError' });
-    create.mockRejectedValueOnce(timeout).mockResolvedValueOnce(answer);
+    create.mockRejectedValueOnce(new APIConnectionTimeoutError()).mockResolvedValueOnce(answer);
     const pending = complete({ system: 's', user: 'u' });
     await vi.runAllTimersAsync();
     await expect(pending).resolves.toMatchObject({ text: 'ok' });
     expect(create.mock.calls[1][0].model).toBe('second:free');
+  });
+
+  it('reports a timeout when every attempt timed out', async () => {
+    create.mockRejectedValue(new APIConnectionTimeoutError());
+    const pending = complete({ system: 's', user: 'u' });
+    pending.catch(() => {});
+    await vi.runAllTimersAsync();
+    await expect(pending).rejects.toMatchObject({ kind: 'timeout' });
   });
 
   it('stops at once on a configuration error', async () => {

@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import OpenAI, { APIConnectionTimeoutError } from 'openai';
 
 import { readEnv } from '../env';
 
@@ -45,7 +45,7 @@ function classify(err: unknown): LlmError {
   const status = (err as { status?: number })?.status;
   const msg = err instanceof Error ? err.message : String(err);
   if (status === 429) return new LlmError(`Provider rate limited: ${msg}`, 'rate_limited', 429);
-  if ((err as { name?: string })?.name === 'APIConnectionTimeoutError')
+  if (err instanceof APIConnectionTimeoutError)
     return new LlmError(`Model timed out after ${TIMEOUT_MS}ms`, 'timeout');
   return new LlmError(`Upstream model error: ${msg}`, 'upstream', status);
 }
