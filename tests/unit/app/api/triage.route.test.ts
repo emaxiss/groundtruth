@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
 import type * as LlmModule from '@/lib/llm';
 import { TRIAGE_REPAIR_PREFIX } from '@/lib/prompts';
@@ -158,16 +158,54 @@ describe('input validation', () => {
 });
 
 describe('model failures', () => {
+  let logged: MockInstance<typeof console.error>;
+
+  beforeEach(() => {
+    logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    logged.mockRestore();
+  });
+
   it.each([
     ['rate_limited', 429],
     ['timeout', 504],
     ['upstream', 502],
     ['config', 500],
-  ] as const)('maps a %s failure to HTTP %i', async (kind, status) => {
-    vi.mocked(complete).mockRejectedValue(new LlmError('failed', kind));
+  ] as const)('maps a %s failure to HTTP %i and a fixed message', async (kind, status) => {
+    vi.mocked(complete).mockRejectedValue(
+      new LlmError('provider said 401: No auth credentials for sk-or-v1-abc123', kind)
+    );
     const res = await triage();
     expect(res.status).toBe(status);
-    await expect(res.json()).resolves.toMatchObject({ kind });
+    const body = (await res.json()) as { error: string; kind: string };
+    expect(body.kind).toBe(kind);
+    expect(body.error).toMatch(/\w/);
+    expect(body.error).not.toMatch(/sk-or-v1|No auth credentials|provider said/);
+  });
+
+  it('logs the provider detail on the server instead of returning it', async () => {
+    vi.mocked(complete).mockRejectedValue(
+      new LlmError('provider said 401: No auth credentials for sk-or-v1-abc123', 'upstream')
+    );
+    await triage();
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining('No auth credentials'));
+  });
+
+  // The eval harness stops retrying when a 429 names a daily cap, so that
+  // signal survives even though the provider's own text does not.
+  it('says when a rate limit is the daily cap', async () => {
+    vi.mocked(complete).mockRejectedValue(
+      new LlmError(
+        'Provider rate limited: Rate limit exceeded: free-models-per-day',
+        'rate_limited',
+        429
+      )
+    );
+    const body = (await (await triage()).json()) as { error: string };
+    expect(body.error).toMatch(/daily/);
+    expect(body.error).not.toContain('free-models-per-day');
   });
 
   // Both failures return 502, so the kind is what tells the eval harness
