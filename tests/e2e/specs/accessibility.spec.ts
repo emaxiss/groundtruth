@@ -46,7 +46,10 @@ test.describe('accessibility (WCAG 2.1 AA)', () => {
   });
 
   test('error alert', async ({ api, app, chat, page }) => {
-    await api.fail('chat', 502, { error: 'Upstream model error: overloaded', kind: 'upstream' });
+    await api.fail('chat', 502, {
+      error: 'The model provider returned an error. Try again.',
+      kind: 'upstream',
+    });
     await app.goto();
     await chat.ask('What does the Pro plan cost?');
     await expect(chat.error).toBeVisible();
