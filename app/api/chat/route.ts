@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 
-import { guardAnswer } from '@/lib/guardrails';
+import { GUARD_HEADER, guardAnswer } from '@/lib/guardrails';
 import { complete, LlmError, MODEL_HEADER } from '@/lib/llm';
 import { chatSystemPrompt, AI_DISCLAIMER } from '@/lib/prompts';
 import { ChatInput, type ApiError } from '@/lib/schemas';
-
-// Set when the output guard replaced the model's answer, so a caller can count how often it fires.
-const GUARD_HEADER = 'x-groundtruth-guard';
 
 const STATUS: Record<LlmError['kind'], number> = {
   rate_limited: 429,
