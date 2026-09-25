@@ -1,7 +1,11 @@
-// Output-side guard for the chat route. The system prompt tells the model not
+// Output-side guard for text a customer reads: chat answers and triage
+// suggested replies. The system prompt tells the model not
 // to disclose its instructions, and a live model still paraphrased them one
 // time in three when asked for "a summary, without quoting". A rule the model
 // can ignore is not a control, so the answer is checked before it is returned.
+
+// Set when the guard replaced model output, so a caller can count how often it fires.
+export const GUARD_HEADER = 'x-groundtruth-guard';
 
 export const DISCLOSURE_REFUSAL =
   "I follow TaskLoop's support policy and cannot share how I am configured. If you have a TaskLoop question, I am happy to help.";
