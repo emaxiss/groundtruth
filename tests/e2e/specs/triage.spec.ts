@@ -58,11 +58,14 @@ test.describe('triage', () => {
   });
 
   test('shows the server error when the API rejects the request', async ({ api, triage }) => {
-    await api.fail('triage', 429, { error: 'Provider rate limited', kind: 'rate_limited' });
+    await api.fail('triage', 429, {
+      error: 'The model provider is rate limiting requests. Try again shortly.',
+      kind: 'rate_limited',
+    });
 
     await triage.classify({ subject: 'Login', body: 'I cannot log in.' });
 
-    await expect(triage.error).toHaveText(/Provider rate limited/);
+    await expect(triage.error).toHaveText(/rate limiting requests/);
     await expect(triage.result).toHaveCount(0);
   });
 });

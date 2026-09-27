@@ -63,11 +63,14 @@ test.describe('chat', () => {
   });
 
   test('shows the server error when the API rejects the request', async ({ api, chat }) => {
-    await api.fail('chat', 502, { error: 'Upstream model error: overloaded', kind: 'upstream' });
+    await api.fail('chat', 502, {
+      error: 'The model provider returned an error. Try again.',
+      kind: 'upstream',
+    });
 
     await chat.ask('What does the Pro plan cost?');
 
-    await expect(chat.error).toHaveText(/Upstream model error: overloaded/);
+    await expect(chat.error).toHaveText(/The model provider returned an error/);
     await expect(chat.agentMessages).toHaveCount(0);
     await expect(chat.send).toBeEnabled();
   });

@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { GUARD_HEADER, guardAnswer } from '@/lib/guardrails';
-import { complete, LlmError, MODEL_HEADER } from '@/lib/llm';
+import { complete, HTTP_STATUS, LlmError, MODEL_HEADER, publicMessage } from '@/lib/llm';
 import { chatSystemPrompt, AI_DISCLAIMER } from '@/lib/prompts';
 import { ChatInput, type ApiError } from '@/lib/schemas';
-
-const STATUS: Record<LlmError['kind'], number> = {
-  rate_limited: 429,
-  timeout: 504,
-  upstream: 502,
-  config: 500,
-};
 
 export async function POST(req: Request) {
   let raw: unknown;
@@ -64,11 +57,13 @@ export async function POST(req: Request) {
     );
   } catch (err) {
     if (err instanceof LlmError) {
+      console.error(`[chat] ${err.kind}: ${err.message}`);
       return NextResponse.json<ApiError>(
-        { error: err.message, kind: err.kind },
-        { status: STATUS[err.kind] }
+        { error: publicMessage(err), kind: err.kind },
+        { status: HTTP_STATUS[err.kind] }
       );
     }
+    console.error(`[chat] unexpected error`, err);
     return NextResponse.json<ApiError>(
       { error: 'Unexpected server error', kind: 'upstream' },
       { status: 500 }

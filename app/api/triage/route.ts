@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { GUARD_HEADER, guardAnswer } from '@/lib/guardrails';
-import { complete, LlmError, MODEL_HEADER } from '@/lib/llm';
+import { complete, HTTP_STATUS, LlmError, MODEL_HEADER, publicMessage } from '@/lib/llm';
 import { triageSystemPrompt, triageUserPrompt, TRIAGE_REPAIR_PREFIX } from '@/lib/prompts';
 import { TriageInput, TriageOutput, type ApiError } from '@/lib/schemas';
-
-const STATUS: Record<LlmError['kind'], number> = {
-  rate_limited: 429,
-  timeout: 504,
-  upstream: 502,
-  config: 500,
-};
 
 // A model that returns prose around its JSON has still failed the contract, but
 // a code fence is a common enough formatting slip that stripping it is cheaper
@@ -102,11 +95,13 @@ export async function POST(req: Request) {
     );
   } catch (err) {
     if (err instanceof LlmError) {
+      console.error(`[triage] ${err.kind}: ${err.message}`);
       return NextResponse.json<ApiError>(
-        { error: err.message, kind: err.kind },
-        { status: STATUS[err.kind] }
+        { error: publicMessage(err), kind: err.kind },
+        { status: HTTP_STATUS[err.kind] }
       );
     }
+    console.error(`[triage] unexpected error`, err);
     return NextResponse.json<ApiError>(
       { error: 'Unexpected server error', kind: 'upstream' },
       { status: 500 }
