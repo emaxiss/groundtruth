@@ -221,3 +221,15 @@ def test_half_the_cases_scored_is_enough() -> None:
 
 def test_a_run_with_no_cases_fails_the_gate() -> None:
     assert gated() == "no cases ran"
+
+
+# A judge that could not score a case records it as skipped. The summary line
+# names that count, so an error-heavy run cannot read as a clean pass.
+def test_the_summary_line_counts_skipped_cases() -> None:
+    r = as_dict(report([case("a", "edge", "passed"), case("b", "edge", "skipped"), case("c", "edge", "skipped")]))
+    assert "1 passed, 0 failed, 2 skipped" in format_report(r, Path("x.json"))[1]
+
+
+def test_the_summary_line_leaves_out_a_zero_skipped_count() -> None:
+    r = as_dict(report([case("a", "edge", "passed")]))
+    assert "skipped" not in format_report(r, Path("x.json"))[1]

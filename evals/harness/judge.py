@@ -140,7 +140,14 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
         headers = {"authorization": f"Bearer {self.config.api_key}", "content-type": "application/json"}
 
         for attempt, backoff in enumerate((*RETRY_BACKOFF_S, None)):
-            res = self.client.post("/chat/completions", json=body, headers=headers)
+            try:
+                res = self.client.post("/chat/completions", json=body, headers=headers)
+            except httpx.TransportError as e:
+                # No answer at all is the judge's failure, never the agent's.
+                if backoff is None:
+                    raise JudgeError(f"judge request failed after {attempt} retries: {e!r}") from e
+                time.sleep(backoff)
+                continue
             if res.status_code == 429:
                 if backoff is None or "per-day" in res.text or "daily" in res.text:
                     raise RateLimited(f"judge rate limited after {attempt} retries: {res.text[:200]}")
@@ -151,7 +158,10 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
                 continue
             if res.status_code != 200:
                 raise JudgeError(f"judge provider returned {res.status_code}: {res.text[:200]}")
-            payload = res.json()
+            try:
+                payload = res.json()
+            except ValueError as e:
+                raise JudgeError(f"judge returned a body that is not JSON: {res.text[:200]!r}") from e
             choices = payload.get("choices")
             if not isinstance(choices, list) or not choices:
                 detail = (payload.get("error") or {}).get("message")

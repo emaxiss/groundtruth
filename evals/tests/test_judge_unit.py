@@ -105,6 +105,45 @@ def test_a_200_with_no_choices_is_retried_then_reported(monkeypatch: pytest.Monk
         judge_with(lambda r: httpx.Response(200, json={"error": {"message": "capacity"}})).generate("q")
 
 
+# A judge request that never gets an answer is the judge's failure. It must
+# surface as JudgeError, which the report records as skipped, not as an
+# exception that scores the agent's case as failed.
+@pytest.mark.parametrize(
+    "error", [httpx.ReadTimeout("read timed out"), httpx.ConnectError("connection refused")], ids=["timeout", "connect"]
+)
+def test_a_transport_error_is_retried_then_reported_as_a_judge_error(
+    monkeypatch: pytest.MonkeyPatch, error: httpx.TransportError
+) -> None:
+    monkeypatch.setattr("harness.judge.time.sleep", lambda s: None)
+    calls: list = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append("post")
+        raise error
+
+    with pytest.raises(JudgeError, match="judge request failed"):
+        judge_with(handler).generate("q")
+    assert len(calls) == 2
+
+
+def test_a_transport_error_then_an_answer_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("harness.judge.time.sleep", lambda s: None)
+    outcomes = iter([httpx.ReadTimeout("read timed out"), ok("ok")])
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        nxt = next(outcomes)
+        if isinstance(nxt, Exception):
+            raise nxt
+        return nxt
+
+    assert judge_with(handler).generate("q") == "ok"
+
+
+def test_a_200_that_is_not_json_is_a_judge_error() -> None:
+    with pytest.raises(JudgeError, match="not JSON"):
+        judge_with(lambda r: httpx.Response(200, text="<html>bad gateway</html>")).generate("q")
+
+
 def test_goldens_are_the_chat_cases_with_a_reference() -> None:
     goldens = load_goldens(DATASET)
     ids = [g.additional_metadata["id"] for g in goldens]

@@ -224,6 +224,7 @@ def format_report(report: dict[str, Any], path: Path) -> list[str]:
         f"{totals['passed']} passed, {totals['failed']} failed"
         + (f", {totals['rate_limited']} rate limited" if totals["rate_limited"] else "")
         + (f", {totals['unavailable']} unavailable" if totals["unavailable"] else "")
+        + (f", {totals['skipped']} skipped" if totals.get("skipped") else "")
         + f" · pass rate {_pct(totals['pass_rate'])}",
     ]
     for cat, s in report["categories"].items():
