@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { GUARD_HEADER, guardAnswer } from '@/lib/guardrails';
 import { complete, LlmError, MODEL_HEADER } from '@/lib/llm';
 import { triageSystemPrompt, triageUserPrompt, TRIAGE_REPAIR_PREFIX } from '@/lib/prompts';
 import { TriageInput, TriageOutput, type ApiError } from '@/lib/schemas';
@@ -34,6 +35,21 @@ function parseTriage(raw: string) {
   };
 }
 
+// The suggested reply is written for the customer, so it passes the same
+// output guard as a chat answer.
+function respond(data: TriageOutput, model: string) {
+  const guarded = guardAnswer(data.suggested_reply);
+  return NextResponse.json(
+    { ...data, suggested_reply: guarded.text },
+    {
+      headers: {
+        [MODEL_HEADER]: model,
+        ...(guarded.blocked ? { [GUARD_HEADER]: 'disclosure' } : {}),
+      },
+    }
+  );
+}
+
 export async function POST(req: Request) {
   let raw: unknown;
   try {
@@ -63,8 +79,7 @@ export async function POST(req: Request) {
   try {
     const attempt = await complete({ system, user, jsonMode: true });
     const first = parseTriage(attempt.text);
-    if (first.ok)
-      return NextResponse.json(first.data, { headers: { [MODEL_HEADER]: attempt.model } });
+    if (first.ok) return respond(first.data, attempt.model);
 
     // One repair attempt. The model is shown its own schema errors rather than
     // being asked again blind, because a second identical prompt tends to
@@ -75,8 +90,7 @@ export async function POST(req: Request) {
       jsonMode: true,
     });
     const repaired = parseTriage(retry.text);
-    if (repaired.ok)
-      return NextResponse.json(repaired.data, { headers: { [MODEL_HEADER]: retry.model } });
+    if (repaired.ok) return respond(repaired.data, retry.model);
 
     return NextResponse.json<ApiError>(
       {
