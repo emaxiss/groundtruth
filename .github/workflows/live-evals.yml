@@ -32,7 +32,6 @@ env:
   GROUNDTRUTH_JUDGE_FALLBACK_MODELS: dots-studio/dots-3-note-preview:free
   # Never 1 here: every model above must end in ":free" or the app refuses to start a run.
   GROUNDTRUTH_ALLOW_PAID_MODELS: '0'
-  GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
   GROUNDTRUTH_APP_URL: http://localhost:3000
   GROUNDTRUTH_EVAL_DELAY_MS: '3500'
   GROUNDTRUTH_EVAL_REPEATS: ${{ inputs.repeats || '1' }}
@@ -46,6 +45,8 @@ jobs:
     steps:
       - name: Skip when no key is configured
         id: key
+        env:
+          GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
         run: |
           if [ -z "$GROUNDTRUTH_API_KEY" ]; then
             echo "::notice::GROUNDTRUTH_API_KEY is not set; skipping the live run."
@@ -80,8 +81,12 @@ jobs:
           pip install -r evals/requirements.txt
           pnpm build
 
+      # The key is set only on the steps that call the provider, so install and
+      # build scripts never see it.
       - name: Start the app against the live provider
         if: steps.key.outputs.present == 'true'
+        env:
+          GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
         run: |
           pnpm start &
           for i in $(seq 1 30); do
@@ -94,18 +99,23 @@ jobs:
         if: steps.key.outputs.present == 'true'
         id: deterministic
         continue-on-error: true
+        shell: bash # pipefail, so the step fails when pytest does and not only when tee does
         run: pnpm evals:deterministic 2>&1 | tee deterministic.log
 
       - name: Judge tier
         if: steps.key.outputs.present == 'true' && (github.event_name == 'schedule' || inputs.judge)
         id: judge
         continue-on-error: true
+        shell: bash
+        env:
+          GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
         run: pnpm evals:judge 2>&1 | tee judge.log
 
       - name: Adversarial suite
         if: steps.key.outputs.present == 'true'
         id: redteam
         continue-on-error: true
+        shell: bash
         run: pnpm redteam --no-table 2>&1 | tee redteam.log
 
       - name: Summarise
@@ -142,18 +152,22 @@ jobs:
             redteam/results/
           retention-days: 90
 
-      # A failed case fails the run. A throttled or unavailable case does not:
-      # that is the provider's state, and the report already says so.
+      # A failed case fails the run, and so does a run where fewer than half the
+      # cases were scored: throttled and unavailable cases are the provider's
+      # state, not a pass. The rule is gate_failure in evals/harness/report.py.
       - name: Fail on a regression
         if: steps.key.outputs.present == 'true'
         run: |
           python3 - <<'PY'
-          import json, pathlib, sys
-          reports = [json.loads(p.read_text()) for p in sorted(pathlib.Path("evals/results").glob("*.json"))]
-          failed = {r["tier"]: r["totals"]["failed"] for r in reports if r["tier"] == "deterministic"}
-          if not failed:
+          import pathlib, sys
+          sys.path.insert(0, "evals")
+          from harness.report import gate_failure, load_report
+          reports = [load_report(p) for p in sorted(pathlib.Path("evals/results").glob("*.json"))]
+          deterministic = [r for r in reports if r["tier"] == "deterministic"]
+          if not deterministic:
               sys.exit("no deterministic report was written")
-          sys.exit(1 if failed["deterministic"] else 0)
+          reason = gate_failure(deterministic[-1])
+          sys.exit(f"deterministic tier: {reason}" if reason else 0)
           PY
 
       - name: Fail on a red-team finding

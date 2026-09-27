@@ -271,6 +271,26 @@ def format_delta(delta: dict[str, Any] | None, previous_path: Path | None) -> li
     return lines
 
 
+# Below this share of scored cases a live run measured too little to count as
+# a pass: the provider throttled or dropped the rest.
+MIN_SCORED_SHARE = 0.5
+
+
+def gate_failure(report: dict[str, Any]) -> str | None:
+    """Why a live run should fail, or None when it passes."""
+    totals = report["totals"]
+    if not totals["total"]:
+        return "no cases ran"
+    if totals["failed"]:
+        return f"{totals['failed']} of {totals['scored']} scored cases failed"
+    if totals["scored"] < totals["total"] * MIN_SCORED_SHARE:
+        return (
+            f"{totals['scored']} of {totals['total']} cases were scored; "
+            "the rest were rate limited, unavailable, or skipped"
+        )
+    return None
+
+
 def compare(previous_path: Path, current_path: Path) -> list[str]:
     """The report and delta lines for two saved runs, as the harness prints them."""
     previous, current = load_report(previous_path), load_report(current_path)
