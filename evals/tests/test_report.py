@@ -15,6 +15,7 @@ from harness.report import (
     compute_delta,
     format_delta,
     format_report,
+    gate_failure,
     previous_report,
     served_models,
     summarize,
@@ -192,3 +193,31 @@ def test_throttled_attempts_do_not_count_against_a_case() -> None:
 
     [b] = collapse_attempts([case("b", "edge", "unavailable"), case("b", "edge", "unavailable")])
     assert (b.outcome, b.passes) == ("unavailable", None)
+
+
+def gated(*outcomes: str) -> str | None:
+    return gate_failure({"totals": summarize([case(f"c{i}", "edge", o) for i, o in enumerate(outcomes)])})
+
+
+def test_a_clean_run_passes_the_gate() -> None:
+    assert gated("passed", "passed", "rate_limited") is None
+
+
+def test_a_failed_case_fails_the_gate() -> None:
+    assert gated("passed", "failed", "passed") == "1 of 3 scored cases failed"
+
+
+# A provider that throttles or drops every request produces no failures and
+# no evidence either; the gate treats that as a failed run, not a green one.
+def test_a_run_with_nothing_scored_fails_the_gate() -> None:
+    reason = gated("rate_limited", "unavailable", "unavailable")
+    assert reason == "0 of 3 cases were scored; the rest were rate limited, unavailable, or skipped"
+
+
+def test_half_the_cases_scored_is_enough() -> None:
+    assert gated("passed", "unavailable") is None
+    assert gated("passed", "unavailable", "unavailable") is not None
+
+
+def test_a_run_with_no_cases_fails_the_gate() -> None:
+    assert gated() == "no cases ran"
