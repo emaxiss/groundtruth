@@ -21,6 +21,25 @@ export class ApiStub {
     );
   }
 
+  /** Answers the next call to the endpoint with the given JSON body; later calls reach the app. */
+  async answerOnce(endpoint: ApiEndpoint, body: unknown): Promise<void> {
+    await this.page.route(
+      `**/api/${endpoint}`,
+      (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }),
+      { times: 1 }
+    );
+  }
+
+  /** Records the JSON body of every request to the endpoint from now on. */
+  requestBodies(endpoint: ApiEndpoint): { all: () => unknown[] } {
+    const bodies: unknown[] = [];
+    this.page.on('request', (req) => {
+      if (req.url().endsWith(`/api/${endpoint}`)) bodies.push(req.postDataJSON());
+    });
+    return { all: () => bodies };
+  }
+
   /** Counts requests to the endpoint from now on, for asserting that none were sent. */
   requestsTo(endpoint: ApiEndpoint): { count: () => number } {
     let count = 0;

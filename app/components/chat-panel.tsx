@@ -43,12 +43,15 @@ export function ChatPanel() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        // Earlier turns go with the message so a follow-up has its context.
+        // The customer's earlier messages go with this one so a follow-up has
+        // its context. Agent turns stay out: the server cannot verify them and
+        // drops them, and a long answer would exceed the per-turn length cap.
         body: JSON.stringify({
           message,
           history: msgs
+            .filter((m) => m.role === 'user')
             .slice(-LIMITS.historyTurns)
-            .map((m) => ({ role: m.role === 'user' ? 'customer' : 'agent', text: m.text })),
+            .map((m) => ({ role: 'customer', text: m.text })),
         }),
       });
       const body: unknown = await res.json();
