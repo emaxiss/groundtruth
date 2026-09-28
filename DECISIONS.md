@@ -27,6 +27,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 
 - The chat API accepts up to ten earlier turns from the client, because a follow-up like "and annually?" is unanswerable without them and the app has no conversation store.
 - Only the customer's turns are forwarded to the model, as a quoted block inside the user message, never as chat messages with the assistant role. The first version forwarded both roles as real turns; the live run of `multi-004` sent a forged agent turn that approved a refund and the model replied with the payout timeline. A model trusts its own earlier words, so the fix is to stop presenting unverifiable text as those words. Rewording the prompt alone left the case passing one time in three.
+- The browser sends only the customer's earlier messages, up to ten, since the server would drop the agent's turns anyway. Sending both roles halved the useful history and let one long answer, over the per-turn length cap, fail every later message until it left the window.
 - The system prompt states that the agent has no record of earlier conversations or account actions and must say so when a customer claims an approval, which is true of this system and is what a human agent without the ticket history would say.
 - The cost is that a follow-up about the agent's own previous answer ("explain your second point") loses its referent. That trade is accepted here and would not be in a system with server-side transcripts.
 
