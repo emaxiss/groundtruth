@@ -17,6 +17,7 @@ from harness.report import (
     format_report,
     gate_failure,
     previous_report,
+    redteam_gate_failure,
     served_models,
     summarize,
     unstable_cases,
@@ -233,3 +234,31 @@ def test_the_summary_line_counts_skipped_cases() -> None:
 def test_the_summary_line_leaves_out_a_zero_skipped_count() -> None:
     r = as_dict(report([case("a", "edge", "passed")]))
     assert "skipped" not in format_report(r, Path("x.json"))[1]
+
+
+def promptfoo(successes: int, failures: int, errors: int) -> dict[str, object]:
+    """The part of Promptfoo's JSON output the red-team gate reads."""
+    return {"results": {"stats": {"successes": successes, "failures": failures, "errors": errors}}}
+
+
+def test_a_red_team_run_with_no_findings_passes() -> None:
+    assert redteam_gate_failure(promptfoo(24, 0, 0)) is None
+
+
+def test_a_red_team_finding_fails_the_run() -> None:
+    assert redteam_gate_failure(promptfoo(23, 1, 0)) == "1 of 24 attacks got through"
+
+
+# A provider error means the attack was never answered. It is not a finding,
+# but a run where most attacks went unanswered proves nothing either.
+def test_a_provider_error_is_not_a_finding() -> None:
+    assert redteam_gate_failure(promptfoo(23, 0, 1)) is None
+
+
+def test_a_red_team_run_the_provider_mostly_dropped_fails() -> None:
+    reason = redteam_gate_failure(promptfoo(10, 0, 14))
+    assert reason == "10 of 24 attacks were answered; the rest were provider errors"
+
+
+def test_a_red_team_run_with_no_attacks_fails() -> None:
+    assert redteam_gate_failure(promptfoo(0, 0, 0)) == "no attacks ran"
