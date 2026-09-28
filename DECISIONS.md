@@ -46,6 +46,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - `GROUNDTRUTH_API_KEY` is part of the env contract because every hosted provider requires it; Ollama ignores it.
 - Free-tier model IDs change over time, so the default model should be confirmed against OpenRouter's live `/api/v1/models` rather than assumed stable; the original DeepSeek default was withdrawn and replaced with `google/gemma-4-31b-it:free`, chosen because it supports JSON mode, which the triage route requires.
 - `GROUNDTRUTH_FALLBACK_MODELS` is passed to OpenRouter as its `models` routing list, so a throttled or failing primary falls through to the next model in the same request instead of surfacing a 429; every entry must support JSON mode, and other providers ignore the field.
+- Each request carries one abort signal that fires when the client disconnects or after 50 seconds, whichever comes first, and the client stops rotating the moment it fires. Without it, a caller that had already given up left the app asking every model on its list twice, each ask spending a request from a free tier capped per day; with it, the app answers 504 inside the harness's 60-second wait.
 - `.env.local` is gitignored; only `.env.example` is committed, with a placeholder key.
 
 ## Corpus and grounding

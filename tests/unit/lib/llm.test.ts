@@ -1,7 +1,14 @@
 import { APIConnectionTimeoutError } from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { assertModelsAllowed, complete, fallbackModels, isFreeModel } from '@/lib/llm';
+import {
+  assertModelsAllowed,
+  complete,
+  DEADLINE_MS,
+  fallbackModels,
+  isFreeModel,
+  withDeadline,
+} from '@/lib/llm';
 
 // vi.mock is hoisted above the imports; vi.hoisted keeps the spy in scope.
 // Only the client is replaced: the SDK's error classes stay real, so the
@@ -226,9 +233,55 @@ describe('rotation', () => {
     await expect(pending).rejects.toMatchObject({ kind: 'timeout' });
   });
 
+  it("passes the caller's signal to every request", async () => {
+    const controller = new AbortController();
+    await complete({ system: 's', user: 'u', signal: controller.signal });
+    expect(create.mock.calls[0][1]).toMatchObject({ signal: controller.signal });
+  });
+
+  // A caller that has gone away cannot read the answer, so the remaining
+  // models are not asked. Each ask spends a request from the provider's quota.
+  it('stops rotating once the caller aborts', async () => {
+    const controller = new AbortController();
+    create.mockImplementationOnce(() => {
+      controller.abort();
+      return Promise.resolve(overloaded);
+    });
+    const pending = complete({ system: 's', user: 'u', signal: controller.signal });
+    pending.catch(() => {});
+    await vi.runAllTimersAsync();
+    await expect(pending).rejects.toMatchObject({ kind: 'upstream' });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a passed deadline as a timeout', async () => {
+    const controller = new AbortController();
+    controller.abort(new DOMException('deadline', 'TimeoutError'));
+    await expect(
+      complete({ system: 's', user: 'u', signal: controller.signal })
+    ).rejects.toMatchObject({ kind: 'timeout' });
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('stops at once on a configuration error', async () => {
     process.env.GROUNDTRUTH_FALLBACK_MODELS = 'second:free,paid/model';
     await expect(complete({ system: 's', user: 'u' })).rejects.toMatchObject({ kind: 'config' });
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe('withDeadline', () => {
+  it('fires when the parent signal aborts', () => {
+    const parent = new AbortController();
+    const signal = withDeadline(parent.signal);
+    expect(signal.aborted).toBe(false);
+    parent.abort();
+    expect(signal.aborted).toBe(true);
+  });
+
+  // The harness waits 60 s for a response; the app answers first, with a 504,
+  // instead of rotating on after the harness has stopped listening.
+  it('leaves room inside the harness timeout', () => {
+    expect(DEADLINE_MS).toBeLessThan(60_000);
   });
 });
