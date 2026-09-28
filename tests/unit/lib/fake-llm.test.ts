@@ -112,6 +112,15 @@ describe('fakeComplete', () => {
     expect(out.refund_eligible).toBe(eligible);
   });
 
+  it.each([
+    ['exactly 48 hours ago', /^Yes\./],
+    ['49 hours ago', /^No\./],
+    ['exactly 14 days ago', /^Yes\./],
+    ['15 days ago', /^No\./],
+  ])('gives a chat verdict on the inclusive refund window: charged %s', (when, verdict) => {
+    expect(complete(`I was charged ${when}. Can I still get a refund?`)).toMatch(verdict);
+  });
+
   it('routes a login problem to account even when it mentions billing', () => {
     const out = JSON.parse(
       complete('SSO was enforced and my password login is rejected; I need billing settings.', true)

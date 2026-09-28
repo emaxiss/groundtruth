@@ -42,6 +42,20 @@ const DOCS_FIXTURES: Array<{ probe: RegExp; answer: string }> = [
     answer:
       'The Team plan is $29 per user per month, or $290 per user per year billed annually. It requires a minimum of 3 seats and adds SAML SSO, SCIM provisioning, 500 GB of storage, and a 99.9% uptime SLA.',
   },
+  // A refund question that says when the charge was gets a verdict: day 14 and
+  // hour 48 still count, day 15 and hour 49 do not. Ahead of the general answer.
+  {
+    probe:
+      /^(?=[\s\S]*refund)(?=[\s\S]*(?:\b(?:[1-9]|1[0-4]) days ago|\b(?:[1-9]|[1-3][0-9]|4[0-8]) hours ago))/i,
+    answer:
+      'Yes. Annual plans are refundable within 14 calendar days of the charge and monthly plans within 48 hours, both counted inclusively, so your request is still within the refund window.',
+  },
+  {
+    probe:
+      /^(?=[\s\S]*refund)(?=[\s\S]*(?:\b(?:1[5-9]|[2-9][0-9]|[1-9][0-9]{2,}) days ago|\b(?:49|[5-9][0-9]|[1-9][0-9]{2,}) hours ago))/i,
+    answer:
+      'No. Annual plans are refundable only within 14 calendar days of the charge and monthly plans only within 48 hours, so this request falls outside the refund window and does not qualify.',
+  },
   {
     probe: /refund/i,
     answer:

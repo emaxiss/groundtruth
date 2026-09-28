@@ -204,3 +204,5 @@ pnpm evals:validate
 ```
 
 Checks the count, unique ids, six-per-category balance, id prefixes, input limits, enum values against the triage contract, that every regex compiles, and that exactly one chat case sits at the 2000-character limit. Standard library only; runs in CI as a gate alongside the app build.
+
+`tests/test_observed_answers.py` checks the patterns themselves: answers observed from live models must pass their case, and answers that are wrong in the way a case exists to catch (a hedged verdict, a stray number, a bare "OK.") must fail it. `tests/test_decline_pattern.py` does the same for the shared out-of-scope decline.
