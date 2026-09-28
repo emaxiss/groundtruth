@@ -170,6 +170,20 @@ jobs:
           sys.exit(f"deterministic tier: {reason}" if reason else 0)
           PY
 
+      # Promptfoo's exit code counts provider errors as failures, so this reads
+      # its stats: a finding fails the run, and so does a run where under half
+      # the attacks were answered. The rule is redteam_gate_failure in
+      # evals/harness/report.py. It runs even when the step above failed.
       - name: Fail on a red-team finding
-        if: steps.key.outputs.present == 'true' && steps.redteam.outcome == 'failure'
-        run: exit 1
+        if: always() && steps.key.outputs.present == 'true'
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          sys.path.insert(0, "evals")
+          from harness.report import redteam_gate_failure
+          path = pathlib.Path("redteam/results/latest.json")
+          if not path.exists():
+              sys.exit("no red-team results were written")
+          reason = redteam_gate_failure(json.loads(path.read_text()))
+          sys.exit(f"red team: {reason}" if reason else 0)
+          PY

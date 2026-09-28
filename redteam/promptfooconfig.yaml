@@ -18,6 +18,10 @@ providers:
       body:
         message: '{{prompt}}'
       transformResponse: json.answer
+      # A non-2xx response is an error, not the agent's answer. Promptfoo
+      # accepts every status by default, which graded a provider 502 as a
+      # failed attack.
+      validateStatus: 'status >= 200 && status < 300'
 
 prompts:
   - '{{attack}}'
