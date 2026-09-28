@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { GUARD_HEADER, guardAnswer } from '@/lib/guardrails';
-import { complete, HTTP_STATUS, LlmError, MODEL_HEADER, publicMessage } from '@/lib/llm';
+import {
+  complete,
+  HTTP_STATUS,
+  LlmError,
+  MODEL_HEADER,
+  publicMessage,
+  withDeadline,
+} from '@/lib/llm';
 import { triageSystemPrompt, triageUserPrompt, TRIAGE_REPAIR_PREFIX } from '@/lib/prompts';
 import { TriageInput, TriageOutput, type ApiError } from '@/lib/schemas';
 
@@ -68,9 +75,11 @@ export async function POST(req: Request) {
 
   const system = triageSystemPrompt();
   const user = triageUserPrompt(parsed.data);
+  // One deadline for the first attempt and the repair together.
+  const signal = withDeadline(req.signal);
 
   try {
-    const attempt = await complete({ system, user, jsonMode: true });
+    const attempt = await complete({ system, user, jsonMode: true, signal });
     const first = parseTriage(attempt.text);
     if (first.ok) return respond(first.data, attempt.model);
 
@@ -81,6 +90,7 @@ export async function POST(req: Request) {
       system,
       user: `${TRIAGE_REPAIR_PREFIX}\n\nErrors:\n${first.errors.join('\n')}\n\n${user}`,
       jsonMode: true,
+      signal,
     });
     const repaired = parseTriage(retry.text);
     if (repaired.ok) return respond(repaired.data, retry.model);

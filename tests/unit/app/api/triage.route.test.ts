@@ -254,3 +254,22 @@ describe('POST /api/triage output guard', () => {
     expect(TriageOutput.parse(await res.json()).suggested_reply).toBe(VALID.suggested_reply);
   });
 });
+
+describe('POST /api/triage cancellation', () => {
+  // A client that disconnects stops the model call, so no further models are
+  // asked on its behalf.
+  it('hands the model call a signal that fires when the request is aborted', async () => {
+    const controller = new AbortController();
+    await POST(
+      new Request('http://test/api/triage', {
+        method: 'POST',
+        body: JSON.stringify(TICKET),
+        signal: controller.signal,
+      })
+    );
+    const { signal } = vi.mocked(complete).mock.calls[0][0];
+    expect(signal?.aborted).toBe(false);
+    controller.abort();
+    expect(signal?.aborted).toBe(true);
+  });
+});

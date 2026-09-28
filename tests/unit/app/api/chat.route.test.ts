@@ -41,6 +41,7 @@ describe('POST /api/chat', () => {
       system: expect.stringContaining('TASKLOOP DOCUMENTATION'),
       user: 'What does Pro cost?',
       history: [],
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -217,5 +218,24 @@ describe('POST /api/chat output guard', () => {
     const res = await chat('What does Pro cost?');
 
     expect(res.headers.get('x-groundtruth-guard')).toBeNull();
+  });
+});
+
+describe('POST /api/chat cancellation', () => {
+  // A client that disconnects stops the model call, so no further models are
+  // asked on its behalf.
+  it('hands the model call a signal that fires when the request is aborted', async () => {
+    const controller = new AbortController();
+    await POST(
+      new Request('http://test/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: 'What does Pro cost?' }),
+        signal: controller.signal,
+      })
+    );
+    const { signal } = vi.mocked(complete).mock.calls[0][0];
+    expect(signal?.aborted).toBe(false);
+    controller.abort();
+    expect(signal?.aborted).toBe(true);
   });
 });

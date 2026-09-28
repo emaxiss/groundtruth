@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { GUARD_HEADER, guardAnswer } from '@/lib/guardrails';
-import { complete, HTTP_STATUS, LlmError, MODEL_HEADER, publicMessage } from '@/lib/llm';
+import {
+  complete,
+  HTTP_STATUS,
+  LlmError,
+  MODEL_HEADER,
+  publicMessage,
+  withDeadline,
+} from '@/lib/llm';
 import { chatSystemPrompt, AI_DISCLAIMER } from '@/lib/prompts';
 import { ChatInput, type ApiError } from '@/lib/schemas';
 
@@ -39,6 +46,7 @@ export async function POST(req: Request) {
       history: (parsed.data.history ?? [])
         .filter((turn) => turn.role === 'customer')
         .map((turn) => turn.text),
+      signal: withDeadline(req.signal),
     });
     const guarded = guardAnswer(text);
     // Disclaimer is appended here, not requested from the model, so it is
