@@ -37,7 +37,7 @@ follow_imports = "skip"
 
 [tool.coverage.run]
 source = ["harness"]
-# The judge suite needs a live model; its module is covered by mocked-transport tests.
+# A pytest plugin's hooks only run inside a session; every tier run exercises it.
 omit = ["harness/reporting.py"]
 
 [tool.coverage.report]
