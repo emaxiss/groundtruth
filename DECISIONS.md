@@ -6,13 +6,13 @@ Design choices and their reasoning, one entry each: the decision, then why.
 
 - The project is named for the eval harness, not the support bot: the harness is the main body of the repo and the bot is the fixture it grades.
 - TaskLoop is the fictional SaaS under test and is named independently of the project.
-- All environment variables share the `GROUNDTRUTH_` prefix. App: `GROUNDTRUTH_BASE_URL`, `GROUNDTRUTH_MODEL`, `GROUNDTRUTH_FALLBACK_MODELS`, `GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_ALLOW_PAID_MODELS`, `GROUNDTRUTH_FAKE_LLM`. Harness: `GROUNDTRUTH_APP_URL`, `GROUNDTRUTH_EVAL_DELAY_MS`, `GROUNDTRUTH_RESULTS_DIR`.
+- All environment variables share the `GROUNDTRUTH_` prefix. App: `GROUNDTRUTH_BASE_URL`, `GROUNDTRUTH_MODEL`, `GROUNDTRUTH_FALLBACK_MODELS`, `GROUNDTRUTH_API_KEY`, `GROUNDTRUTH_ALLOW_PAID_MODELS`, `GROUNDTRUTH_FAKE_LLM`. Harness: `GROUNDTRUTH_APP_URL`, `GROUNDTRUTH_EVAL_DELAY_MS`, `GROUNDTRUTH_EVAL_REPEATS`, `GROUNDTRUTH_RESULTS_DIR`. Judge tier: `GROUNDTRUTH_JUDGE_MODEL`, `GROUNDTRUTH_JUDGE_FALLBACK_MODELS`, `GROUNDTRUTH_JUDGE_RELEVANCY_MIN`, `GROUNDTRUTH_JUDGE_CORRECTNESS_MIN`, plus the provider's base URL and key.
 
 ## Layout
 
 - Tests live under `tests/`, one folder per layer, rather than next to the source they cover: a reader can see the whole verification story in one tree, and each layer's config (`vitest.config.ts`, `playwright.config.ts`) points at exactly one folder.
 - The browser suite is written against page objects and custom fixtures so a spec reads as a user flow and a markup change is a one-file edit; the `api` fixture stubs the app's API from the browser side for error states no fake model produces.
-- Every `GROUNDTRUTH_*` variable is read in `lib/env.ts` and input limits live in `lib/limits.ts`, so the env contract and the client-side copy each have one source and cannot drift from the schemas.
+- Every `GROUNDTRUTH_*` variable the app uses is read in `lib/env.ts` (the harness reads its own under `evals/harness/`) and input limits live in `lib/limits.ts`, so the env contract and the client-side copy each have one source and cannot drift from the schemas.
 - The harness is a package (`evals/harness/`) with suites, unit tests, and tools in their own folders; `conftest.py` only sets DeepEval's environment and provides fixtures, and the report hooks are a named pytest plugin.
 - The API contract runs as a Playwright project on the `request` fixture rather than a standalone script, so it shares the web server, the reporters, and the JUnit output with the browser suite and needs no browser installed.
 - Browser locators are roles and labels first, test ids only where the UI has no accessible handle; a locator that needs an accessible name is how two missing names were found and added. Every view is scanned with axe at WCAG 2.1 AA under reduced motion, which caught label text at 2.5:1 contrast; the `faint` and `dim` tokens were raised to pass on all three surfaces.
@@ -42,7 +42,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 
 - Default provider is OpenRouter's `:free` tier rather than local Ollama; it gives better model quality than a 3B local model and keeps a 2 GB pull out of the quickstart.
 - Accepted consequence: the zero-cost property weakens from zero-by-construction to zero-by-free-tier, and `:free` models are rate limited, so a full dataset run with judge metrics can hit the ceiling.
-- `lib/llm/client.ts` retries with backoff on 429, and the eval harness must treat provider rate limiting as a distinct outcome from model failure; a throttled request scored as a failed case would be a misleading result.
+- `lib/llm/client.ts` moves to the next model in the routing list on a 429, an upstream error, or a timeout, with a longer pause after a 429, and the eval harness must treat provider rate limiting as a distinct outcome from model failure; a throttled request scored as a failed case would be a misleading result.
 - Ollama remains a documented one-variable fallback rather than being removed: it is the escape hatch when free-tier limits bite, and running the same suite against two providers is what the provider-agnostic client is for.
 - `GROUNDTRUTH_API_KEY` is part of the env contract because every hosted provider requires it; Ollama ignores it.
 - Free-tier model IDs change over time, so the default model should be confirmed against OpenRouter's live `/api/v1/models` rather than assumed stable; the original DeepSeek default was withdrawn and replaced with `google/gemma-4-31b-it:free`, chosen because it supports JSON mode, which the triage route requires.
@@ -52,7 +52,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 
 ## Corpus and grounding
 
-- Corpus files run 280 to 340 words each; the extra length over a leaner target is kept because evals need checkable specifics, and trimming would cut assertable numbers.
+- Corpus files run 278 to 340 words each; the extra length over a leaner target is kept because evals need checkable specifics, and trimming would cut assertable numbers.
 - The grounding block is a hand-curated pinned-fact map per document, not a truncation of the markdown, so budget trimming can never silently drop a refund or pricing rule the guardrail evals depend on.
 - The grounding budget is 4800 characters (about 1200 tokens at 4 chars per token); `buildGroundingBlock()` throws rather than truncating, so a corpus edit that blows the budget fails loudly.
 - The grounding block is cached in-module after the first build; the corpus is static at runtime, so there is no invalidation path.
@@ -94,7 +94,7 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - Every dataset case expects HTTP 200; error-path behaviour belongs to the route tests, and a case that cannot get a 200 in fake mode is a fixture gap, not an eval result.
 - A 429 from the app raises a distinct `RateLimited` outcome instead of a failed assertion, because a throttled request scored as a wrong answer would misreport the agent.
 - The fake model's triage fixtures are ordered most-specific first (refund eligibility and account issues before the general billing probe), so the fake satisfies the dataset's boundary cases without a lookup table keyed on the dataset itself.
-- `httpx` and `pytest` are the only harness dependencies; versions are pinned in `evals/requirements.txt`.
+- The harness runs on `httpx`, `pytest`, and DeepEval, with `mypy`, `ruff`, and `pytest-cov` for its own checks; versions are pinned in `evals/requirements.txt`.
 - The judge tier runs on DeepEval because it integrates with pytest, its vocabulary (`LLMTestCase`, `Golden`, `assert_test`, `GEval`) is already familiar, and its metric templates are maintained upstream.
 - The judge model is a `DeepEvalBaseLLM` subclass rather than DeepEval's built-in OpenAI client, for three reasons: it applies the same `:free` guard as the app before any call, it forces JSON mode and validates the schema DeepEval hands to `generate()` locally (a judge that returns prose there fails every metric with a parse error), and it records which model actually served the request.
 - Correctness is a `GEval` metric with a four-level rubric (`Rubric` score ranges) rather than free-form criteria, so the scale the thresholds were calibrated on is fixed in code and a future judge swap is re-checked against the same anchors.
@@ -116,3 +116,9 @@ Design choices and their reasoning, one entry each: the decision, then why.
 - The out-of-scope decline pattern has its own regression test listing every phrasing a live model has actually produced, so widening it is a change backed by evidence instead of a guess made one failure at a time.
 - Out-of-scope cases assert on a family of decline phrasings rather than one sentence, because a live model declines in its own words; the sharper check on those cases is `must_not_match`, which proves no partial compliance.
 - The harness paces requests with `GROUNDTRUTH_EVAL_DELAY_MS` and retries a 429 with backoff, but raises immediately on a daily-cap 429, because a per-minute ceiling clears in seconds and a per-day one does not.
+
+## Known gaps
+
+- `GROUNDTRUTH_EVAL_REPEATS` applies to the deterministic tier only; judge-tier cases run once, so judge noise is visible across runs but not within one.
+- The judge thresholds were set from the agent's own answers on three runs, so they say the current answers pass, not that the threshold separates good from bad; the sixteen-answer agreement set is the check on that, and it is small.
+- The grounding block is `lib/corpus/facts.ts`, compiled by hand from `docs-corpus/`; nothing checks the two against each other.

@@ -163,37 +163,37 @@ Re-run it with the calibration whenever the judge model or the rubric changes. A
 Every run writes `evals/results/<timestamp>.json` (gitignored; `GROUNDTRUTH_RESULTS_DIR` overrides the directory) and prints a summary plus the delta against the previous run of the same tier:
 
 ```
-report: evals/results/2026-09-16T17-41-08Z.json
-tier: deterministic · model: fake · 30 cases · 29 passed, 1 failed · pass rate 96.7%
+report: evals/results/2026-09-30T04-33-08Z.json
+tier: deterministic · model: fake · 36 cases · 36 passed, 0 failed · pass rate 100.0%
   adversarial   6/6   100.0%
-  edge          5/6   83.3%
+  edge          6/6   100.0%
   factual       6/6   100.0%
+  multi_turn    6/6   100.0%
   out_of_scope  6/6   100.0%
   triage        6/6   100.0%
-served by: nvidia/nemotron-3-super-120b-a12b:free ×30
-delta vs 2026-09-16T17-39-52Z.json:
-  new failures:  edge-004
+served by: fake ×36
+delta vs 2026-09-30T04-33-06Z.json:
+  new failures:  none
   fixed:         none
-  overall: 100.0% -> 96.7% (-3.3)
-  edge: 100.0% -> 83.3% (-16.7)
+  overall: 100.0% -> 100.0% (0.0)
 ```
 
 Set `GROUNDTRUTH_EVAL_REPEATS=3` to run every case three times. A case passes only if every scored attempt passed; one that passed some attempts and failed others is recorded as failed and listed on an `unstable:` line as `id passes/attempts`. A live model varies even at temperature 0, and a case that holds two times in three is not a case that holds. Throttled and unavailable attempts are left out of the count.
 
-The `served by:` line counts the `x-groundtruth-model` header on each response. With fallback routing configured, it shows whether the primary model or a fallback produced a run; in fake mode it reads `fake ×30`.
+The `served by:` line counts the `x-groundtruth-model` header on each response. With fallback routing configured, it shows whether the primary model or a fallback produced a run; in fake mode it reads `fake ×36`.
 
 The JSON carries the same numbers plus one entry per case:
 
-| Field                        | Meaning                                                                                                  |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `run_at`, `tier`, `app_url`  | When, which tier (`deterministic` or `judge`), and which app the run hit.                                |
-| `model`, `fake_llm`          | Copied from `/api/health` so a report says what it measured.                                             |
-| `cases[]`                    | `id`, `category`, `endpoint`, `outcome`, `score`, `duration_ms`, and the assertion `message` on failure. |
-| `cases[].outcome`            | `passed`, `failed`, `rate_limited`, `unavailable`, or `skipped`. Only the first two are scored.          |
-| `cases[].score`              | `1.0` or `0.0` on the deterministic tier; the correctness score on the judge tier.                       |
-| `cases[].attempts`, `passes` | Repeat runs only: how many times the case ran and how many scored attempts passed.                       |
-| `cases[].scores`             | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                          |
-| `categories`, `totals`       | Per-category and overall counts per outcome, plus `scored` and `pass_rate`.                              |
+| Field                                      | Meaning                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `run_at`, `tier`, `app_url`                | When, which tier (`deterministic` or `judge`), and which app the run hit.                                                |
+| `model`, `fake_llm`, `paid_models_allowed` | Copied from `/api/health` so a report says what it measured.                                                             |
+| `cases[]`                                  | `id`, `category`, `endpoint`, `outcome`, `score`, `duration_ms`, `served_model`, and the assertion `message` on failure. |
+| `cases[].outcome`                          | `passed`, `failed`, `rate_limited`, `unavailable`, or `skipped`. Only the first two are scored.                          |
+| `cases[].score`                            | `1.0` or `0.0` on the deterministic tier; the correctness score on the judge tier.                                       |
+| `cases[].attempts`, `passes`               | Repeat runs only: how many times the case ran and how many scored attempts passed.                                       |
+| `cases[].scores`                           | Judge tier only: `relevancy`, `correctness`, and `judge_model`.                                                          |
+| `categories`, `totals`                     | Per-category and overall counts per outcome, plus `scored` and `pass_rate`.                                              |
 
 The baseline is the most recent report with the same tier and the same model, so a fake-mode run is never compared with a live one. The delta compares case ids present in both runs: `new_failures` (passed then failed), `fixed` (failed then passed), `still_failing`, and the pass-rate change overall and per category. Cases added or removed between runs are listed separately and never counted as a change. A single pass rate says little; the delta says what the last edit cost. Two saved reports can be compared directly: `python3 evals/harness/report.py <previous.json> <current.json>` prints the same summary and delta for any pair, and `examples/` holds the pair the top-level README walks through.
 

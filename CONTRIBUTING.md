@@ -6,7 +6,7 @@ Requires Node 22 (see `.node-version`), pnpm 10, and Python 3.12.
 
 ```bash
 pnpm install
-pnpm exec playwright install chromium
+pnpm exec playwright install chromium firefox webkit
 python3 -m venv evals/.venv && evals/.venv/bin/pip install -r evals/requirements.txt
 cp .env.example .env.local
 ```
