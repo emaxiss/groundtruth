@@ -59,9 +59,24 @@ def test_a_fenced_json_block_still_validates() -> None:
 
 
 @pytest.mark.parametrize("content", ["not json", '{"score": "high"}', '{"reason": "no score"}', "[1, 2]"])
-def test_json_that_does_not_fit_the_schema_is_a_judge_error(content: str) -> None:
+def test_json_that_does_not_fit_the_schema_twice_is_a_judge_error(content: str) -> None:
+    calls: list = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append("post")
+        return ok(content)
+
     with pytest.raises(JudgeError, match="does not match Verdict"):
-        judge_with(lambda r: ok(content)).generate("q", schema=Verdict)
+        judge_with(handler).generate("q", schema=Verdict)
+    assert len(calls) == 2
+
+
+# Free judge models sometimes answer an empty object; live runs on 2026-09-28
+# and 2026-09-29 each lost one case to it. The next ask usually succeeds.
+def test_an_empty_object_is_asked_again_once() -> None:
+    responses = iter([ok("{\n\n\n}"), ok('{"score": 6, "reason": "missing the discount"}')])
+    out = judge_with(lambda r: next(responses)).generate("q", schema=Verdict)
+    assert out == Verdict(score=6, reason="missing the discount")
 
 
 def test_a_paid_judge_is_refused_before_any_call() -> None:

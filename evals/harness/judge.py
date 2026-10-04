@@ -120,10 +120,18 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
         content = self._complete(prompt)
         if schema is None:
             return content
-        try:
-            return schema.model_validate_json(_strip_fence(content))
-        except ValueError as e:
-            raise JudgeError(f"judge returned JSON that does not match {schema.__name__}: {content[:200]!r}") from e
+        # One more ask on a mismatch: free judge models sometimes answer an empty
+        # object, and the next answer is usually well formed.
+        for attempt in range(2):
+            try:
+                return schema.model_validate_json(_strip_fence(content))
+            except ValueError as e:
+                if attempt:
+                    raise JudgeError(
+                        f"judge returned JSON that does not match {schema.__name__}: {content[:200]!r}"
+                    ) from e
+                content = self._complete(prompt)
+        raise AssertionError("unreachable")
 
     async def a_generate(self, prompt: str, schema: type[BaseModel] | None = None) -> str | BaseModel:
         return self.generate(prompt, schema)
