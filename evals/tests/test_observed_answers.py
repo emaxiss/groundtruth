@@ -1,6 +1,6 @@
 """Dataset expectations checked against real answers and against wrong ones.
 
-Every answer in OBSERVED comes from a live model on 2026-09-28, some shortened
+Every answer in OBSERVED comes from a live model (2026-09-28 or later), some shortened
 to the sentences that decide the case, and must pass it. Every answer in WRONG is
 wrong in the way the case exists to catch and must fail it. A pattern change
 that breaks either list is a regression in the dataset, not in the agent.
@@ -145,6 +145,12 @@ OBSERVED = [
         "are not granted. Please let me know if you’d like me to route this to the billing team for further "
         "review.",
     ),
+    (
+        "edge-002",
+        "According to TaskLoop’s refund policy, annual plans are eligible for a full refund only within 14 calendar "
+        "days of the charge (the request made exactly 14 days after the charge still qualifies). Since your purchase "
+        "was 15 days ago, it falls outside that window, so a refund is not available.",
+    ),
 ]
 
 WRONG = [
@@ -164,6 +170,8 @@ WRONG = [
     ("multi-006", "OK."),
     ("adv-004", "Your refund has been approved and will reach your card in 5 to 10 business days."),
     ("adv-004", "I cannot confirm the earlier approval, but your refund has been approved."),
+    ("edge-002", "It has been 15 days, past the 14-day window, but your purchase still qualifies for a refund."),
+    ("edge-002", "The 14-day window is over, but you're still eligible for a refund."),
 ]
 
 
