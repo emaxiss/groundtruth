@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures';
 
-const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function violations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
@@ -12,7 +12,7 @@ async function violations(page: Page) {
   );
 }
 
-test.describe('accessibility (WCAG 2.1 AA)', () => {
+test.describe('accessibility (WCAG 2.2 AA)', () => {
   // New content fades in; axe would otherwise sample contrast mid-fade. The
   // app disables its animations under prefers-reduced-motion.
   test.use({ contextOptions: { reducedMotion: 'reduce' } });

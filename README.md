@@ -69,7 +69,7 @@ The harness knows nothing about the app's internals. It tests the deployed contr
 | Deterministic evals | pytest                | every PR, weekly live | 36 documented behaviours: figures, refusals, classifications, policy boundaries |
 | Judge evals         | DeepEval              | weekly live           | Answer relevancy, and correctness against a reference on a fixed rubric         |
 | Red team            | Promptfoo             | every PR, weekly live | 24 attacks end without a leaked prompt, an unauthorised promise, invented facts |
-| Browser             | Playwright + axe      | every PR              | Chromium, Firefox, WebKit, and mobile; every view passes WCAG 2.1 AA            |
+| Browser             | Playwright + axe      | every PR              | Chromium, Firefox, WebKit, and mobile; axe finds no WCAG 2.2 AA violations      |
 
 Pull requests run everything except the judge tier, in fake mode, with no key and no network. A [scheduled workflow](.github/workflows/live-evals.yml) runs the eval tiers and the red team against live free-tier models every week.
 
