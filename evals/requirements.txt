@@ -1,4 +1,4 @@
-deepeval==4.2.6
+deepeval==4.2.8
 httpx==0.28.1
 mypy==2.4.0
 pytest==9.1.1
