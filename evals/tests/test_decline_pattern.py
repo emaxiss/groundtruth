@@ -26,12 +26,14 @@ OBSERVED_DECLINES = [
     "I can\u2019t compare TaskLoop with Jira, but I\u2019m happy to help with TaskLoop.",
     "I don't have that information; please ask about TaskLoop features, plans, or support.",
     "I do not have that documented in the TaskLoop help center.",
+    "I\u2019m here to help with TaskLoop questions only, so please let me know if you need assistance with your TaskLoop account or features.",
 ]
 
 NOT_DECLINES = [
     "The Pro plan is $12 per user per month, billed monthly.",
     "Annual plans are refundable within 14 calendar days of the charge.",
     "Here is a poem about the sea: the waves roll in.",
+    "Exports work with TaskLoop Pro only; the Free plan cannot export.",
 ]
 
 
