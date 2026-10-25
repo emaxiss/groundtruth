@@ -137,7 +137,7 @@ GROUNDTRUTH_MODEL=google/gemma-4-31b-it:free
 GROUNDTRUTH_API_KEY=sk-or-v1-...
 # Tried in order when the primary errors or is throttled. Every id must end in ":free"
 # unless GROUNDTRUTH_ALLOW_PAID_MODELS=1. Responses name the serving model in x-groundtruth-model.
-GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-super-120b-a12b:free
+GROUNDTRUTH_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-ultra-550b-a55b:free
 
 # Or run fully offline with Ollama:
 GROUNDTRUTH_BASE_URL=http://localhost:11434/v1
