@@ -27,6 +27,7 @@ OBSERVED_DECLINES = [
     "I don't have that information; please ask about TaskLoop features, plans, or support.",
     "I do not have that documented in the TaskLoop help center.",
     "I\u2019m here to help with TaskLoop questions only, so please let me know if you need assistance with your TaskLoop account or features.",
+    "I only handle TaskLoop support questions; for weather information please check a weather service.",
 ]
 
 NOT_DECLINES = [
