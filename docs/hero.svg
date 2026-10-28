@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-labelledby="t d">
   <title id="t">groundtruth</title>
-  <desc id="d">An AI support agent and the harness that proves it works. A run report shows one new failure, edge-002, after a one-line edit to the refund window.</desc>
+  <desc id="d">An AI support agent and the harness that proves it works. A run report shows two new failures, edge-002 and multi-002, after a one-line edit to the refund window.</desc>
   <defs>
     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
       <path d="M40 0H0V40" fill="none" stroke="#24312f" stroke-width="1" opacity="0.45"/>
@@ -62,47 +62,68 @@
     <text x="764" y="75" font-size="13" fill="#788c87">run report · delta vs baseline</text>
 
     <g font-size="14">
-      <text x="708" y="122" fill="#9bb0aa">tier: deterministic · 30 cases</text>
+      <text x="708" y="120" fill="#9bb0aa">tier: deterministic · 36 cases</text>
 
       <g fill="#dfe7e4">
-        <text x="708" y="158">adversarial</text>
-        <text x="708" y="184">edge</text>
-        <text x="708" y="210">factual</text>
-        <text x="708" y="236">out_of_scope</text>
-        <text x="708" y="262">triage</text>
+        <text x="708" y="150">adversarial</text>
+        <text x="708" y="172">edge</text>
+        <text x="708" y="194">factual</text>
+        <text x="708" y="216">multi_turn</text>
+        <text x="708" y="238">out_of_scope</text>
+        <text x="708" y="260">triage</text>
       </g>
 
       <g fill="#4ade9b">
-        <g id="bar-full">
-          <rect x="836" y="149" width="32" height="10" rx="2"/>
-          <rect x="872" y="149" width="32" height="10" rx="2"/>
-          <rect x="908" y="149" width="32" height="10" rx="2"/>
-          <rect x="944" y="149" width="32" height="10" rx="2"/>
-          <rect x="980" y="149" width="32" height="10" rx="2"/>
-          <rect x="1016" y="149" width="32" height="10" rx="2"/>
-        </g>
-        <rect x="836" y="175" width="32" height="10" rx="2"/>
-        <rect x="872" y="175" width="32" height="10" rx="2"/>
-        <rect x="908" y="175" width="32" height="10" rx="2"/>
-        <rect x="944" y="175" width="32" height="10" rx="2"/>
-        <rect x="980" y="175" width="32" height="10" rx="2"/>
-        <rect x="1016" y="175" width="32" height="10" rx="2" fill="#f2545b"/>
-        <use href="#bar-full" y="52"/>
-        <use href="#bar-full" y="78"/>
-        <use href="#bar-full" y="104"/>
+        <rect x="836" y="141" width="32" height="10" rx="2"/>
+        <rect x="872" y="141" width="32" height="10" rx="2"/>
+        <rect x="908" y="141" width="32" height="10" rx="2"/>
+        <rect x="944" y="141" width="32" height="10" rx="2"/>
+        <rect x="980" y="141" width="32" height="10" rx="2"/>
+        <rect x="1016" y="141" width="32" height="10" rx="2"/>
+        <rect x="836" y="163" width="32" height="10" rx="2"/>
+        <rect x="872" y="163" width="32" height="10" rx="2"/>
+        <rect x="908" y="163" width="32" height="10" rx="2"/>
+        <rect x="944" y="163" width="32" height="10" rx="2"/>
+        <rect x="980" y="163" width="32" height="10" rx="2"/>
+        <rect x="1016" y="163" width="32" height="10" rx="2" fill="#f2545b"/>
+        <rect x="836" y="185" width="32" height="10" rx="2"/>
+        <rect x="872" y="185" width="32" height="10" rx="2"/>
+        <rect x="908" y="185" width="32" height="10" rx="2"/>
+        <rect x="944" y="185" width="32" height="10" rx="2"/>
+        <rect x="980" y="185" width="32" height="10" rx="2"/>
+        <rect x="1016" y="185" width="32" height="10" rx="2"/>
+        <rect x="836" y="207" width="32" height="10" rx="2"/>
+        <rect x="872" y="207" width="32" height="10" rx="2"/>
+        <rect x="908" y="207" width="32" height="10" rx="2"/>
+        <rect x="944" y="207" width="32" height="10" rx="2"/>
+        <rect x="980" y="207" width="32" height="10" rx="2"/>
+        <rect x="1016" y="207" width="32" height="10" rx="2" fill="#f2545b"/>
+        <rect x="836" y="229" width="32" height="10" rx="2"/>
+        <rect x="872" y="229" width="32" height="10" rx="2"/>
+        <rect x="908" y="229" width="32" height="10" rx="2"/>
+        <rect x="944" y="229" width="32" height="10" rx="2"/>
+        <rect x="980" y="229" width="32" height="10" rx="2"/>
+        <rect x="1016" y="229" width="32" height="10" rx="2"/>
+        <rect x="836" y="251" width="32" height="10" rx="2"/>
+        <rect x="872" y="251" width="32" height="10" rx="2"/>
+        <rect x="908" y="251" width="32" height="10" rx="2"/>
+        <rect x="944" y="251" width="32" height="10" rx="2"/>
+        <rect x="980" y="251" width="32" height="10" rx="2"/>
+        <rect x="1016" y="251" width="32" height="10" rx="2"/>
       </g>
 
       <g fill="#9bb0aa" text-anchor="end">
-        <text x="1114" y="158">6/6</text>
-        <text x="1114" y="184" fill="#e8a13a">5/6</text>
-        <text x="1114" y="210">6/6</text>
-        <text x="1114" y="236">6/6</text>
-        <text x="1114" y="262">6/6</text>
+        <text x="1114" y="150">6/6</text>
+        <text x="1114" y="172" fill="#e8a13a">5/6</text>
+        <text x="1114" y="194">6/6</text>
+        <text x="1114" y="216" fill="#e8a13a">5/6</text>
+        <text x="1114" y="238">6/6</text>
+        <text x="1114" y="260">6/6</text>
       </g>
 
-      <path d="M708 282H1114" stroke="#24312f" stroke-dasharray="3 4"/>
-      <text x="708" y="308" fill="#9bb0aa">new failures: <tspan fill="#f2545b" font-weight="700">edge-002</tspan></text>
-      <text x="708" y="334" fill="#9bb0aa">overall: 100.0% <tspan fill="#788c87">→</tspan> <tspan fill="#e8a13a" font-weight="700">96.7%</tspan></text>
+      <path d="M708 280H1114" stroke="#24312f" stroke-dasharray="3 4"/>
+      <text x="708" y="306" fill="#9bb0aa">new failures: <tspan fill="#f2545b" font-weight="700">edge-002, multi-002</tspan></text>
+      <text x="708" y="332" fill="#9bb0aa">overall: 100.0% <tspan fill="#788c87">→</tspan> <tspan fill="#e8a13a" font-weight="700">94.4%</tspan></text>
     </g>
   </g>
 </svg>

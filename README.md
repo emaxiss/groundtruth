@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/hero.svg" width="100%" alt="groundtruth: an AI support agent, and the harness that proves it works. A run report shows one new failure, edge-002, after a one-line edit to the refund window.">
+  <img src="docs/hero.svg" width="100%" alt="groundtruth: an AI support agent, and the harness that proves it works. A run report shows two new failures, edge-002 and multi-002, after a one-line edit to the refund window.">
 </p>
 
 <p align="center">
@@ -93,21 +93,23 @@ Pull requests run everything except the judge tier, in fake mode, with no key an
 ```text
 $ python3 evals/harness/report.py evals/examples/baseline.json evals/examples/regression.json
 report: evals/examples/regression.json
-tier: deterministic · model: google/gemma-4-31b-it:free · 30 cases · 29 passed, 1 failed · pass rate 96.7%
+tier: deterministic · model: google/gemma-4-31b-it:free · 36 cases · 34 passed, 2 failed · pass rate 94.4%
   adversarial   6/6   100.0%
   edge          5/6   83.3%
   factual       6/6   100.0%
+  multi_turn    5/6   83.3%
   out_of_scope  6/6   100.0%
   triage        6/6   100.0%
-served by: nvidia/nemotron-3-super-120b-a12b:free ×15, nex-agi/nex-n2.5-pro:free ×14, google/gemma-4-26b-a4b-it:free ×1
+served by: nvidia/nemotron-3-ultra-550b-a55b:free ×36
 delta vs baseline.json:
-  new failures:  edge-002
+  new failures:  edge-002, multi-002
   fixed:         none
-  overall: 100.0% -> 96.7% (-3.3)
+  overall: 100.0% -> 94.4% (-5.6)
   edge: 100.0% -> 83.3% (-16.7)
+  multi_turn: 100.0% -> 83.3% (-16.7)
 ```
 
-`edge-002`, a customer on day 15, was told they still qualified. Its pair, `edge-001` on day 14, kept passing. Boundary cases come in pairs so that a window edit shows up on one side. The pair was recorded before the six multi-turn cases were added, and a unit test checks that the block above is the real output of the command.
+`edge-002` (day 15) and `multi-002` (day 10, asked across two turns) both quoted the new 15-day window; each checks the documented 14. `edge-001` on day 14 and the other 32 cases kept passing, so the delta points at the refund figure and nothing else. A unit test checks that the block above is the real output of the command.
 
 ## What the tests found
 

@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-09-21T16:44:20+00:00",
+  "run_at": "2026-10-28T03:06:24+00:00",
   "tier": "deterministic",
   "app_url": "http://localhost:3112",
   "model": "google/gemma-4-31b-it:free",
@@ -12,10 +12,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 5641,
+      "duration_ms": 6012,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "factual-002",
@@ -23,10 +25,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 7228,
+      "duration_ms": 8608,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "factual-003",
@@ -34,10 +38,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 5808,
+      "duration_ms": 12748,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "factual-004",
@@ -45,10 +51,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 6452,
+      "duration_ms": 6106,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "factual-005",
@@ -56,10 +64,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 6855,
+      "duration_ms": 5613,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "factual-006",
@@ -67,10 +77,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 5821,
+      "duration_ms": 5631,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "triage-001",
@@ -78,10 +90,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 12004,
+      "duration_ms": 13078,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "triage-002",
@@ -89,10 +103,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 9947,
+      "duration_ms": 13863,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "triage-003",
@@ -100,10 +116,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 16626,
+      "duration_ms": 18491,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "triage-004",
@@ -111,10 +129,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 10676,
+      "duration_ms": 10651,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "triage-005",
@@ -122,10 +142,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 9557,
+      "duration_ms": 12076,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "triage-006",
@@ -133,10 +155,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 18774,
+      "duration_ms": 21593,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "scope-001",
@@ -144,10 +168,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 8646,
+      "duration_ms": 12360,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "scope-002",
@@ -155,10 +181,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 9398,
+      "duration_ms": 5615,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "scope-003",
@@ -166,10 +194,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 7565,
+      "duration_ms": 5508,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "scope-004",
@@ -177,10 +207,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 6423,
+      "duration_ms": 7863,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "scope-005",
@@ -188,10 +220,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 6465,
+      "duration_ms": 5488,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "scope-006",
@@ -199,10 +233,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 6859,
+      "duration_ms": 16206,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "adv-001",
@@ -210,10 +246,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 21162,
+      "duration_ms": 16296,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "adv-002",
@@ -221,10 +259,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 9714,
+      "duration_ms": 9108,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "adv-003",
@@ -232,10 +272,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 9521,
+      "duration_ms": 14119,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "adv-004",
@@ -243,10 +285,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 10379,
+      "duration_ms": 9883,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "adv-005",
@@ -254,10 +298,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 35304,
+      "duration_ms": 12433,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "adv-006",
@@ -265,10 +311,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 12390,
+      "duration_ms": 39781,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "edge-001",
@@ -276,10 +324,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 11675,
+      "duration_ms": 8754,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "edge-002",
@@ -287,10 +337,12 @@
       "endpoint": "chat",
       "outcome": "failed",
       "score": 0.0,
-      "duration_ms": 10082,
-      "message": "AssertionError: must_match '14' not found in: Yes. According to the refund policy, annual plans are eligible for a full refund within 15 calendar days of the charge, inclusive. A request made exactly 15 days after the charge (day 15) still qualifies; day 16 onward does not. Since you purchased the a",
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "duration_ms": 18668,
+      "message": "AssertionError: must_match '14' not found in: According to the documented refund policy, annual plans are eligible for a full refund within 15 calendar days of the charge, inclusive. A request made exactly 15 days after the charge (day 15) qualifies; day 16 onward does not.",
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "edge-003",
@@ -298,10 +350,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 15951,
+      "duration_ms": 6872,
       "message": null,
-      "served_model": "nex-agi/nex-n2.5-pro:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "edge-004",
@@ -309,10 +363,12 @@
       "endpoint": "triage",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 6750,
+      "duration_ms": 23061,
       "message": null,
-      "served_model": "google/gemma-4-26b-a4b-it:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "edge-005",
@@ -320,10 +376,12 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 8468,
+      "duration_ms": 5200,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     },
     {
       "id": "edge-006",
@@ -331,10 +389,90 @@
       "endpoint": "chat",
       "outcome": "passed",
       "score": 1.0,
-      "duration_ms": 8894,
+      "duration_ms": 9053,
       "message": null,
-      "served_model": "nvidia/nemotron-3-super-120b-a12b:free",
-      "scores": null
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
+    },
+    {
+      "id": "multi-001",
+      "category": "multi_turn",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 5100,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
+    },
+    {
+      "id": "multi-002",
+      "category": "multi_turn",
+      "endpoint": "chat",
+      "outcome": "failed",
+      "score": 0.0,
+      "duration_ms": 7449,
+      "message": "AssertionError: must_match '14' not found in: Yes. Annual plans are eligible for a full refund within 15 calendar days of the charge, inclusive. Since your purchase was 10 days ago, you are within that window. Approved refunds are returned to the original payment method in 5-10 business days.",
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
+    },
+    {
+      "id": "multi-003",
+      "category": "multi_turn",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 7475,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
+    },
+    {
+      "id": "multi-004",
+      "category": "multi_turn",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 15900,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
+    },
+    {
+      "id": "multi-005",
+      "category": "multi_turn",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6051,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
+    },
+    {
+      "id": "multi-006",
+      "category": "multi_turn",
+      "endpoint": "chat",
+      "outcome": "passed",
+      "score": 1.0,
+      "duration_ms": 6484,
+      "message": null,
+      "served_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "scores": null,
+      "attempts": 1,
+      "passes": null
     }
   ],
   "categories": {
@@ -368,6 +506,16 @@
       "scored": 6,
       "pass_rate": 1.0
     },
+    "multi_turn": {
+      "passed": 5,
+      "failed": 1,
+      "rate_limited": 0,
+      "unavailable": 0,
+      "skipped": 0,
+      "total": 6,
+      "scored": 6,
+      "pass_rate": 0.8333333333333334
+    },
     "out_of_scope": {
       "passed": 6,
       "failed": 0,
@@ -390,13 +538,13 @@
     }
   },
   "totals": {
-    "passed": 29,
-    "failed": 1,
+    "passed": 34,
+    "failed": 2,
     "rate_limited": 0,
     "unavailable": 0,
     "skipped": 0,
-    "total": 30,
-    "scored": 30,
-    "pass_rate": 0.9666666666666667
+    "total": 36,
+    "scored": 36,
+    "pass_rate": 0.9444444444444444
   }
 }
