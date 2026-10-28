@@ -154,7 +154,7 @@ Example from an earlier calibration run. On `edge-001` (a refund request exactly
 pnpm evals:agreement
 ```
 
-On 2026-09-21 the judge `nex-agi/nex-n2.5-pro:free` agreed with all sixteen labels (16/16 in 98 seconds) at the 0.5 threshold. That is one run on a small set, so it shows the judge separates these classes, not how often it would on production traffic.
+On 2026-09-21 the judge `nex-agi/nex-n2.5-pro:free` agreed with all sixteen labels (16/16 in 98 seconds) at the 0.5 threshold. On 2026-10-24, after that model left the free tier, `recursive/flint-v1.0:free` agreed with all sixteen (16/16 in 87 seconds) and `dots-studio/dots-3-note-preview:free` with fifteen: it scored the `factual-004` wrong figure exactly 0.5, so Flint is the primary. Each is one run on a small set, so it shows the judge separates these classes, not how often it would on production traffic.
 
 Re-run it with the calibration whenever the judge model or the rubric changes. A judge that cannot separate a wrong figure from a missing detail makes every threshold above meaningless.
 
