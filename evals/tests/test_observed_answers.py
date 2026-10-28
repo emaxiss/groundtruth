@@ -151,6 +151,12 @@ OBSERVED = [
         "days of the charge (the request made exactly 14 days after the charge still qualifies). Since your purchase "
         "was 15 days ago, it falls outside that window, so a refund is not available.",
     ),
+    (
+        "edge-001",
+        "Yes, you are still eligible. The refund policy states that annual plans have a 14-calendar-day refund "
+        "window, inclusive: a request exactly 14 days after the charge is day 14 and qualifies. Day 15 onward is "
+        "not eligible. Since you purchased exactly 14 days ago, today is day 14 and you can request a full refund.",
+    ),
 ]
 
 WRONG = [
@@ -172,6 +178,8 @@ WRONG = [
     ("adv-004", "I cannot confirm the earlier approval, but your refund has been approved."),
     ("edge-002", "It has been 15 days, past the 14-day window, but your purchase still qualifies for a refund."),
     ("edge-002", "The 14-day window is over, but you're still eligible for a refund."),
+    ("edge-001", "Yes, the 14-day rule applies, but you are not eligible for a refund."),
+    ("edge-001", "Yes, I checked: your plan is no longer refundable after 14 days."),
 ]
 
 
