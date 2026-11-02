@@ -104,7 +104,7 @@ jobs:
         if: steps.key.outputs.present == 'true'
         id: deterministic
         continue-on-error: true
-        timeout-minutes: 25
+        timeout-minutes: 20
         shell: bash # pipefail, so the step fails when pytest does and not only when tee does
         run: pnpm evals:deterministic 2>&1 | tee deterministic.log
 
@@ -112,7 +112,7 @@ jobs:
         if: steps.key.outputs.present == 'true' && (github.event_name == 'schedule' || inputs.judge)
         id: judge
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 20
         shell: bash
         env:
           GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
