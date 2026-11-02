@@ -36,6 +36,8 @@ env:
   GROUNDTRUTH_EVAL_DELAY_MS: '3500'
   GROUNDTRUTH_EVAL_REPEATS: ${{ inputs.repeats || '1' }}
   DEEPEVAL_TELEMETRY_OPT_OUT: '1'
+  # Piped through tee, Python buffers stdout; unbuffered, the log shows each case as it finishes.
+  PYTHONUNBUFFERED: '1'
 
 jobs:
   live:
@@ -95,10 +97,14 @@ jobs:
           done
           curl -s http://localhost:3000/api/health
 
+      # Each tier has its own budget inside the job's 60 minutes. A provider that
+      # stops answering costs a case about four minutes of retries, so without
+      # these the first tier can use the whole hour and nothing is reported.
       - name: Deterministic tier
         if: steps.key.outputs.present == 'true'
         id: deterministic
         continue-on-error: true
+        timeout-minutes: 25
         shell: bash # pipefail, so the step fails when pytest does and not only when tee does
         run: pnpm evals:deterministic 2>&1 | tee deterministic.log
 
@@ -106,6 +112,7 @@ jobs:
         if: steps.key.outputs.present == 'true' && (github.event_name == 'schedule' || inputs.judge)
         id: judge
         continue-on-error: true
+        timeout-minutes: 15
         shell: bash
         env:
           GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
@@ -115,6 +122,7 @@ jobs:
         if: steps.key.outputs.present == 'true'
         id: redteam
         continue-on-error: true
+        timeout-minutes: 10
         shell: bash
         run: pnpm redteam --no-table 2>&1 | tee redteam.log
 
