@@ -11,6 +11,9 @@ updates:
     cooldown:
       default-days: 7
     groups:
+      # react-dom requires the exact same version as react.
+      react:
+        patterns: [react, react-dom]
       dev-dependencies:
         dependency-type: development
     ignore:
