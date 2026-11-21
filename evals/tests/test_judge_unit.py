@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import httpx
@@ -187,3 +190,22 @@ def test_the_judge_never_shares_a_model_with_the_agent(source: str) -> None:
     path = ROOT / source
     shared = routing(path, "GROUNDTRUTH") & routing(path, "GROUNDTRUTH_JUDGE")
     assert not shared, f"{source}: the judge could grade answers from {sorted(shared)}"
+
+
+def test_a_response_padded_with_whitespace_still_ends_at_the_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The provider sends whitespace while a model is still working, so a read timeout never fires
+    # on a model that hangs. The request has to end on a total deadline instead.
+    monkeypatch.setattr("harness.judge.REQUEST_DEADLINE_S", 0.3)
+    monkeypatch.setattr("harness.judge.RETRY_BACKOFF_S", (0.0,))
+    pause = threading.Event()
+
+    def padded() -> Iterator[bytes]:
+        for _ in range(40):
+            pause.wait(0.05)
+            yield b"\n"
+        yield json.dumps({"model": "j/one:free", "choices": [{"message": {"content": "late"}}]}).encode()
+
+    started = time.monotonic()
+    with pytest.raises(JudgeError, match="deadline"):
+        judge_with(lambda r: httpx.Response(200, content=padded())).generate("q")
+    assert time.monotonic() - started < 1.5
