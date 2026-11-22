@@ -25,9 +25,13 @@ from pydantic import BaseModel
 
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 # One retry with a short backoff: DeepEval wraps each judge call in its own
-# per-attempt budget (set in conftest.py), and this must fit inside it.
+# per-attempt budget (set in conftest.py), and two requests plus the backoff
+# must fit inside it.
 RETRY_BACKOFF_S = (5.0,)
 HTTP_TIMEOUT_S = 90.0
+# The provider pads a pending answer with whitespace, which resets the read
+# timeout above. A model that hangs is only stopped by a total deadline.
+REQUEST_DEADLINE_S = 120.0
 
 # Calibrated against nex-agi/nex-n2.5-pro:free over three runs; see evals/README.md.
 # Relevancy counts the share of statements that address the question. A support
@@ -149,7 +153,7 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
 
         for attempt, backoff in enumerate((*RETRY_BACKOFF_S, None)):
             try:
-                res = self.client.post("/chat/completions", json=body, headers=headers)
+                res = self._post(body, headers)
             except httpx.TransportError as e:
                 # No answer at all is the judge's failure, never the agent's.
                 if backoff is None:
@@ -183,6 +187,16 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
                 raise JudgeError("judge returned an empty response")
             return content
         raise JudgeError("judge exhausted retries")
+
+    def _post(self, body: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+        deadline = time.monotonic() + REQUEST_DEADLINE_S
+        chunks = []
+        with self.client.stream("POST", "/chat/completions", json=body, headers=headers) as res:
+            for chunk in res.iter_bytes():
+                if time.monotonic() > deadline:
+                    raise httpx.ReadTimeout(f"no complete answer within the {REQUEST_DEADLINE_S:g} s deadline")
+                chunks.append(chunk)
+        return httpx.Response(res.status_code, content=b"".join(chunks))
 
 
 # Rubric anchors for correctness against the reference. The same four levels
