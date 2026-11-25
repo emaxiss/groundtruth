@@ -124,8 +124,9 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
         content = self._complete(prompt)
         if schema is None:
             return content
-        # One more ask on a mismatch: free judge models sometimes answer an empty
-        # object, and the next answer is usually well formed.
+        # One more ask on a mismatch. At temperature 0 the same request gets the
+        # same answer, so the second ask shows the model its reply and names the
+        # keys the schema needs.
         for attempt in range(2):
             try:
                 return schema.model_validate_json(_strip_fence(content))
@@ -134,18 +135,29 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
                     raise JudgeError(
                         f"judge returned JSON that does not match {schema.__name__}: {content[:200]!r}"
                     ) from e
-                content = self._complete(prompt)
+                keys = ", ".join(f'"{k}"' for k in schema.model_fields)
+                content = self._complete(
+                    prompt,
+                    [
+                        {"role": "assistant", "content": content},
+                        {
+                            "role": "user",
+                            "content": f"That reply is not valid JSON in the requested format. "
+                            f"Reply again with only one JSON object with the keys {keys}.",
+                        },
+                    ],
+                )
         raise AssertionError("unreachable")
 
     async def a_generate(self, prompt: str, schema: type[BaseModel] | None = None) -> str | BaseModel:
         return self.generate(prompt, schema)
 
-    def _complete(self, prompt: str) -> str:
+    def _complete(self, prompt: str, follow_up: list[dict[str, str]] | None = None) -> str:
         body: dict[str, Any] = {
             "model": self.config.model,
             "temperature": 0,
             "response_format": {"type": "json_object"},
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [{"role": "user", "content": prompt}, *(follow_up or [])],
         }
         if self.config.fallback_models:
             body["models"] = [self.config.model, *self.config.fallback_models]

@@ -82,6 +82,33 @@ def test_an_empty_object_is_asked_again_once() -> None:
     assert out == Verdict(score=6, reason="missing the discount")
 
 
+# At temperature 0 the same request gets the same answer. factual-004 was
+# skipped in the live runs of 2026-11-21 and 2026-11-23 on an identical
+# malformed reply both times, so the second ask has to be a different request.
+def test_the_second_ask_shows_the_bad_reply_and_names_the_keys() -> None:
+    bad = '{": {": [": {:: "], "reason": "x", "verdict": "no"}'
+    requests: list[dict] = []
+
+    def deterministic(r: httpx.Request) -> httpx.Response:
+        body = json.loads(r.content)
+        requests.append(body)
+        if len(body["messages"]) == 1:
+            return ok(bad)
+        return ok('{"score": 6, "reason": "missing the discount"}')
+
+    out = judge_with(deterministic).generate("q", schema=Verdict)
+    assert out == Verdict(score=6, reason="missing the discount")
+    first, second = requests
+    assert first["messages"] == [{"role": "user", "content": "q"}]
+    assert second["messages"][:2] == [
+        {"role": "user", "content": "q"},
+        {"role": "assistant", "content": bad},
+    ]
+    correction = second["messages"][2]["content"]
+    assert second["messages"][2]["role"] == "user"
+    assert '"score"' in correction and '"reason"' in correction
+
+
 def test_a_paid_judge_is_refused_before_any_call() -> None:
     with pytest.raises(JudgeError, match="paid judge model: openai/gpt-5"):
         JudgeConfig(
