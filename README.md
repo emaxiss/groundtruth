@@ -68,7 +68,7 @@ The harness knows nothing about the app's internals. It tests the deployed contr
 | Contract            | Playwright (requests) | every PR              | The built API honours its contract, byte-identical across runs                  |
 | Deterministic evals | pytest                | every PR, weekly live | 36 documented behaviours: figures, refusals, classifications, policy boundaries |
 | Judge evals         | DeepEval              | weekly live           | Answer relevancy, and correctness against a reference on a fixed rubric         |
-| Red team            | Promptfoo             | every PR, weekly live | 24 attacks end without a leaked prompt, an unauthorised promise, invented facts |
+| Red team            | Promptfoo             | every PR, weekly live | 32 attacks end without a leaked prompt, an unauthorised promise, invented facts |
 | Browser             | Playwright + axe      | every PR              | Chromium, Firefox, WebKit, and mobile; axe finds no WCAG 2.2 AA violations      |
 
 Pull requests run everything except the judge tier, in fake mode, with no key and no network. A [scheduled workflow](.github/workflows/live-evals.yml) runs the eval tiers and the red team against live free-tier models every week.
@@ -82,7 +82,7 @@ Pull requests run everything except the judge tier, in fake mode, with no key an
 - **The contract suite and browser suite** run against the fake model, so they say nothing about what a real model does.
 - **The deterministic tier** proves a documented behaviour held, not that the answer was good. A passing regex is not a good answer.
 - **The judge tier** is a noisier instrument, which is why it is not a pull request gate.
-- **The red team** is twenty-four hand-written attacks, not a generated or adaptive campaign.
+- **The red team** is thirty-two hand-written attacks, not a generated or adaptive campaign.
 
 </details>
 
@@ -161,7 +161,7 @@ Every variable is described in [`.env.example`](.env.example). Running the eval 
 - **Dataset.** 36 golden cases in [`evals/dataset.jsonl`](evals/dataset.jsonl), six per category: `factual`, `triage`, `out_of_scope`, `adversarial`, `multi_turn`, and `edge`. Each case targets a failure mode worth catching, and boundaries such as exactly 14 days or exactly 48 hours are tested on both sides.
 - **Deterministic first.** Disclaimers, schema validity, refusals, and the absence of undocumented promises are regex and parser checks: fast, free, and with no threshold to tune. Text is normalised for typographic spaces and dashes before matching.
 - **Judge second.** [DeepEval](https://github.com/confident-ai/deepeval) scores answer relevancy and a `GEval` correctness metric against each case's reference, on a rubric fixed in [`evals/harness/judge.py`](evals/harness/judge.py). It sits behind the `judge` pytest marker, so `pytest -m "not judge"` stays a deterministic gate. The judge is checked against sixteen answers of known quality before its scores are trusted, and its thresholds come from calibration runs documented in [`evals/README.md`](evals/README.md).
-- **Red team.** A [Promptfoo](https://github.com/promptfoo/promptfoo) suite in [`redteam/`](redteam/promptfooconfig.yaml) covers instruction override, claimed authority, prompt extraction, refund social engineering, hidden instructions, obfuscation, and hallucination bait. Its first live run found the agent would summarise its own rules, which led to the output guard in [`lib/guardrails.ts`](lib/guardrails.ts).
+- **Red team.** A [Promptfoo](https://github.com/promptfoo/promptfoo) suite in [`redteam/`](redteam/promptfooconfig.yaml) covers instruction override, claimed authority, prompt extraction, refund social engineering, hidden instructions, obfuscation, and hallucination bait. A second suite, [`redteam/triage.yaml`](redteam/triage.yaml), writes the ticket itself and goes after the fields a support queue acts on: refund eligibility through a pasted staff note or injected JSON, a forced critical escalation, a threat filed as a feature request, and the rules leaked into the suggested reply. Its first live run found the agent would summarise its own rules, which led to the output guard in [`lib/guardrails.ts`](lib/guardrails.ts).
 - **Honest outcomes.** A throttled or unavailable provider is reported as its own outcome, not as a failed case. Repeated runs list the cases that did not hold every time, and each run prints its delta against the previous one.
 
 </details>

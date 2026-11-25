@@ -126,6 +126,14 @@ jobs:
         shell: bash
         run: pnpm redteam --no-table 2>&1 | tee redteam.log
 
+      - name: Triage adversarial suite
+        if: steps.key.outputs.present == 'true'
+        id: redteam-triage
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: bash
+        run: pnpm redteam:triage --no-table 2>&1 | tee redteam-triage.log
+
       - name: Summarise
         if: steps.key.outputs.present == 'true'
         run: |
@@ -138,6 +146,12 @@ jobs:
               echo '### Adversarial suite'
               echo '```'
               grep -E 'passed|failed|errors' redteam.log
+              echo '```'
+            fi
+            if [ -f redteam-triage.log ]; then
+              echo '### Triage adversarial suite'
+              echo '```'
+              grep -E 'passed|failed|errors' redteam-triage.log
               echo '```'
             fi
             if [ -f judge.log ]; then
@@ -157,6 +171,7 @@ jobs:
             deterministic.log
             judge.log
             redteam.log
+            redteam-triage.log
             redteam/results/
           retention-days: 90
 
@@ -189,9 +204,11 @@ jobs:
           import json, pathlib, sys
           sys.path.insert(0, "evals")
           from harness.report import redteam_gate_failure
-          path = pathlib.Path("redteam/results/latest.json")
-          if not path.exists():
-              sys.exit("no red-team results were written")
-          reason = redteam_gate_failure(json.loads(path.read_text()))
-          sys.exit(f"red team: {reason}" if reason else 0)
+          reasons = []
+          for name, file in (("red team", "latest.json"), ("triage red team", "triage-latest.json")):
+              path = pathlib.Path("redteam/results") / file
+              reason = redteam_gate_failure(json.loads(path.read_text())) if path.exists() else "no results were written"
+              if reason:
+                  reasons.append(f"{name}: {reason}")
+          sys.exit("; ".join(reasons) if reasons else 0)
           PY

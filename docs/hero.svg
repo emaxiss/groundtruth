@@ -41,7 +41,7 @@
       <text x="78" y="339">golden cases</text>
 
       <rect x="210" y="286" width="138" height="66" rx="10" fill="#111716" stroke="#24312f"/>
-      <text x="226" y="317" font-size="24" font-weight="700" fill="#dfe7e4">24</text>
+      <text x="226" y="317" font-size="24" font-weight="700" fill="#dfe7e4">32</text>
       <text x="226" y="339">red-team attacks</text>
 
       <rect x="358" y="286" width="138" height="66" rx="10" fill="#111716" stroke="#24312f"/>
