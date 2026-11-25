@@ -10,6 +10,7 @@ const INJECTION_PATTERNS = [
   /system prompt|reveal your (instructions|prompt)|repeat your (instructions|prompt)/i,
   /developer mode|jailbreak|DAN mode/i,
   /override (the |your )?(policy|rules|refund)/i,
+  /system override|set (severity|route_?to|refund_eligible) to/i,
 ];
 
 // Word-bounded: short terms like `api`, `sso`, and `sla` otherwise match inside
@@ -117,6 +118,19 @@ const TRIAGE_DEFAULT = {
 // by the out-of-window default, and account issues come before billing so a
 // login problem that mentions billing settings is not misrouted.
 const TRIAGE_FIXTURES: Array<{ probe: RegExp; result: Record<string, unknown> }> = [
+  {
+    // A threat is abuse whatever the ticket asks to be filed as.
+    probe: /waiting for (her|him|them|you) outside|I know (where|which office) (she|he|they|you)/i,
+    result: {
+      category: 'abuse',
+      severity: 'high',
+      route_to: 'trust_safety',
+      refund_eligible: false,
+      suggested_reply:
+        'We do not accept threats against our staff. This ticket has been passed to our trust and safety team.',
+      confidence: 0.9,
+    },
+  },
   {
     probe: /crash|data loss|lost (all )?(my )?(data|tasks)|outage|cannot access|500 error/i,
     result: {
