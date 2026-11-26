@@ -6,15 +6,26 @@ import json
 import re
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import httpx
 import pytest
+from deepeval.test_case import LLMTestCase
 from pydantic import BaseModel
 
 from harness.dataset import DATASET
-from harness.judge import JudgeConfig, JudgeError, OpenRouterJudge, RateLimited, load_goldens
+from harness.judge import (
+    JudgeConfig,
+    JudgeError,
+    OpenRouterJudge,
+    RateLimited,
+    correctness_metric,
+    failures,
+    load_goldens,
+    measure,
+    relevancy_metric,
+)
 
 CFG = JudgeConfig(
     base_url="https://judge.test/v1", api_key="k", model="j/one:free", fallback_models=("j/two:free",), allow_paid=False
@@ -236,3 +247,88 @@ def test_a_response_padded_with_whitespace_still_ends_at_the_deadline(monkeypatc
     with pytest.raises(JudgeError, match="deadline"):
         judge_with(lambda r: httpx.Response(200, content=padded())).generate("q")
     assert time.monotonic() - started < 1.5
+
+
+def test_a_case_costs_three_judge_calls_and_correctness_runs_beside_relevancy() -> None:
+    # Free judges are slow (one call can take a minute), so a case's wall time is its chain of
+    # judge calls. Relevancy needs statements, then verdicts; correctness needs one call and
+    # does not wait for them. Relevancy's written reason is never read, so it is never asked for.
+    calls: list[tuple[str, float, float]] = []
+    lock = threading.Lock()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        prompt = json.loads(req.content)["messages"][0]["content"]
+        if "breakdown and generate a list of statements" in prompt:
+            kind, content = "statements", '{"statements": ["Team costs $29 per user per month."]}'
+        elif "determine whether each statement is relevant" in prompt:
+            kind, content = "verdicts", '{"verdicts": [{"verdict": "yes"}]}'
+        elif "evaluation steps" in prompt:
+            kind, content = "correctness", '{"score": 10, "reason": "matches"}'
+        else:
+            kind, content = "other", '{"reason": "unused"}'
+        started = time.monotonic()
+        time.sleep(0.3)
+        with lock:
+            calls.append((kind, started, time.monotonic()))
+        return ok(content)
+
+    j = judge_with(handler)
+    case = LLMTestCase(input="Team price?", actual_output="$29 per user per month.", expected_output="$29 per user.")
+    relevancy, correctness = relevancy_metric(j), correctness_metric(j)
+    measure(case, relevancy, correctness)
+
+    assert sorted(kind for kind, _, _ in calls) == ["correctness", "statements", "verdicts"]
+    span = {kind: (start, end) for kind, start, end in calls}
+    assert span["correctness"][0] < span["statements"][1], "correctness waited for relevancy"
+    assert relevancy.score == 1.0
+    assert correctness.score == 1.0
+    assert correctness.reason == "matches"
+    assert failures(relevancy, correctness) == []
+
+
+def relevant_with_correctness(correctness: str) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(req: httpx.Request) -> httpx.Response:
+        prompt = json.loads(req.content)["messages"][0]["content"]
+        if "breakdown and generate a list of statements" in prompt:
+            return ok('{"statements": ["Team costs $19."]}')
+        if "determine whether each statement is relevant" in prompt:
+            return ok('{"verdicts": [{"verdict": "yes"}]}')
+        return ok(correctness)
+
+    return handler
+
+
+def test_a_low_correctness_score_is_a_failure_with_its_reason() -> None:
+    j = judge_with(relevant_with_correctness('{"score": 1, "reason": "price is wrong"}'))
+    case = LLMTestCase(input="Team price?", actual_output="$19.", expected_output="$29 per user.")
+    relevancy, correctness = relevancy_metric(j), correctness_metric(j)
+    measure(case, relevancy, correctness)
+    [failure] = failures(relevancy, correctness)
+    assert "Correctness" in failure
+    assert "price is wrong" in failure
+
+
+def test_a_judge_error_in_either_metric_reaches_the_test_as_a_judge_error() -> None:
+    # The run report counts a JudgeError as skipped, never as the agent's failure.
+    j = judge_with(relevant_with_correctness("not json"))
+    case = LLMTestCase(input="Team price?", actual_output="$29.", expected_output="$29 per user.")
+    with pytest.raises(JudgeError):
+        measure(case, relevancy_metric(j), correctness_metric(j))
+
+
+def test_after_no_answer_the_retry_asks_the_fallbacks_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A judge that hangs on one request usually hangs on the next one too (live 2026-11-26:
+    # edge-002 lost 2 x 120 s to it). OpenRouter only moves down the list on an error, never
+    # on slowness, so the retry has to put the fallbacks first itself.
+    monkeypatch.setattr("harness.judge.time.sleep", lambda s: None)
+    routes: list[list[str]] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        body = json.loads(req.content)
+        routes.append([body["model"], *body["models"]])
+        if len(routes) == 1:
+            raise httpx.ReadTimeout("no complete answer within the deadline")
+        return ok("graded")
+
+    assert judge_with(handler).generate("q") == "graded"
+    assert routes == [["j/one:free", "j/one:free", "j/two:free"], ["j/two:free", "j/two:free", "j/one:free"]]

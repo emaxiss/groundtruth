@@ -156,6 +156,8 @@ pnpm evals:agreement
 
 On 2026-09-21 the judge `nex-agi/nex-n2.5-pro:free` agreed with all sixteen labels (16/16 in 98 seconds) at the 0.5 threshold. On 2026-10-24, after that model left the free tier, `recursive/flint-v1.0:free` agreed with all sixteen (16/16 in 87 seconds) and `dots-studio/dots-3-note-preview:free` with fifteen: it scored the `factual-004` wrong figure exactly 0.5, so Flint is the primary. Each is one run on a small set, so it shows the judge separates these classes, not how often it would on production traffic.
 
+On 2026-11-26 Dots had left OpenRouter. Flint agreed with sixteen of sixteen again (212 seconds). `particle-ai/particle-1:free` agreed with 30 of the 31 labels it scored over two runs (one call failed in transit; the miss was passing the `factual-004` wrong figure), and `baidu/ernie-5.5-flash-preview:free` with 45 of 48 over three runs. Flint stays the primary for agreement; Particle and then ERNIE are the fallbacks, and both answer in seconds where Flint takes up to a minute. Three judge-tier runs graded mostly by the fallbacks passed all nine cases, with correctness no lower than 0.7 and relevancy no lower than 0.77.
+
 Re-run it with the calibration whenever the judge model or the rubric changes. A judge that cannot separate a wrong figure from a missing detail makes every threshold above meaningless.
 
 ## Run reports
