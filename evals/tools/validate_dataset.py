@@ -16,10 +16,11 @@ from typing import Any
 
 DATASET = Path(__file__).resolve().parents[1] / "dataset.jsonl"
 
-EXPECTED_TOTAL = 36
+# Pinned so a deleted case fails validation; raise it when cases are added.
+EXPECTED_TOTAL = 39
 CATEGORIES = {"factual", "triage", "out_of_scope", "adversarial", "edge", "multi_turn"}
 MAX_HISTORY_TURNS = 10
-PER_CATEGORY = EXPECTED_TOTAL // len(CATEGORIES)
+MIN_PER_CATEGORY = 6
 ID_PREFIX = {
     "factual": "factual-",
     "triage": "triage-",
@@ -144,6 +145,17 @@ def problems_for(case: dict[str, Any], line_no: int) -> list[str]:
     return errs
 
 
+def count_problems(cases: list[dict[str, Any]]) -> list[str]:
+    errors = []
+    if len(cases) != EXPECTED_TOTAL:
+        errors.append(f"expected {EXPECTED_TOTAL} cases, found {len(cases)}")
+    by_cat = Counter(c.get("category") for c in cases)
+    for cat in sorted(CATEGORIES):
+        if by_cat.get(cat, 0) < MIN_PER_CATEGORY:
+            errors.append(f"category '{cat}' has {by_cat.get(cat, 0)} cases, at least {MIN_PER_CATEGORY} expected")
+    return errors
+
+
 def main() -> int:
     if not DATASET.exists():
         print(f"missing {DATASET}", file=sys.stderr)
@@ -168,12 +180,7 @@ def main() -> int:
     if dupes:
         errors.append(f"duplicate ids: {dupes}")
 
-    if len(cases) != EXPECTED_TOTAL:
-        errors.append(f"expected {EXPECTED_TOTAL} cases, found {len(cases)}")
-    by_cat = Counter(c.get("category") for c in cases)
-    for cat in sorted(CATEGORIES):
-        if by_cat.get(cat, 0) != PER_CATEGORY:
-            errors.append(f"category '{cat}' has {by_cat.get(cat, 0)} cases, expected {PER_CATEGORY}")
+    errors.extend(count_problems(cases))
 
     longest = max(
         (c for c in cases if c.get("endpoint") == "chat"), key=lambda c: len(c["input"]["message"]), default=None
@@ -186,6 +193,7 @@ def main() -> int:
         print(f"\ndataset: FAIL ({len(errors)} problem(s))", file=sys.stderr)
         return 1
 
+    by_cat = Counter(c.get("category") for c in cases)
     print(f"{len(cases)} cases, {len(set(ids))} unique ids")
     for cat in sorted(CATEGORIES):
         print(f"  {cat:<13} {by_cat[cat]}")

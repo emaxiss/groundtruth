@@ -132,6 +132,43 @@ const TRIAGE_FIXTURES: Array<{ probe: RegExp; result: Record<string, unknown> }>
     },
   },
   {
+    // A takeover is a security incident, ahead of the plain login probe below.
+    probe: /someone (signed|logged) in(to| to) my account|took over my account|account takeover/i,
+    result: {
+      category: 'account',
+      severity: 'critical',
+      route_to: 'trust_safety',
+      refund_eligible: false,
+      suggested_reply:
+        'We have passed this to our trust and safety team, who will secure the account and contact you at your original email address.',
+      confidence: 0.9,
+    },
+  },
+  {
+    probe: /whole workspace (is )?down|nobody on the team can do any work/i,
+    result: {
+      category: 'bug',
+      severity: 'critical',
+      route_to: 'engineering',
+      refund_eligible: false,
+      suggested_reply:
+        'Sorry for the disruption. Our engineering team is investigating the outage now and we will update you as soon as service is restored.',
+      confidence: 0.9,
+    },
+  },
+  {
+    probe: /\btypo\b|misspel|is spelled/i,
+    result: {
+      category: 'bug',
+      severity: 'low',
+      route_to: 'engineering',
+      refund_eligible: false,
+      suggested_reply:
+        'Thanks for spotting that. We have passed it to our engineering team to correct.',
+      confidence: 0.8,
+    },
+  },
+  {
     probe: /crash|data loss|lost (all )?(my )?(data|tasks)|outage|cannot access|500 error/i,
     result: {
       category: 'bug',
