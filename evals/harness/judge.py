@@ -8,6 +8,7 @@ judge is refused unless explicitly opted into.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -17,10 +18,10 @@ from typing import Any
 
 import httpx
 from deepeval.dataset import Golden
-from deepeval.metrics import AnswerRelevancyMetric, GEval
+from deepeval.metrics import AnswerRelevancyMetric, BaseMetric, GEval
 from deepeval.metrics.g_eval.utils import Rubric
 from deepeval.models import DeepEvalBaseLLM
-from deepeval.test_case import SingleTurnParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 from pydantic import BaseModel
 
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
@@ -150,7 +151,8 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
         raise AssertionError("unreachable")
 
     async def a_generate(self, prompt: str, schema: type[BaseModel] | None = None) -> str | BaseModel:
-        return self.generate(prompt, schema)
+        # A thread, so a slow call does not hold up the other metric's calls.
+        return await asyncio.to_thread(self.generate, prompt, schema)
 
     def _complete(self, prompt: str, follow_up: list[dict[str, str]] | None = None) -> str:
         body: dict[str, Any] = {
@@ -170,6 +172,11 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
                 # No answer at all is the judge's failure, never the agent's.
                 if backoff is None:
                     raise JudgeError(f"judge request failed after {attempt} retries: {e!r}") from e
+                # OpenRouter moves down the list on an error, never on a model that hangs,
+                # so the retry asks the fallbacks first.
+                if self.config.fallback_models:
+                    order = [*self.config.fallback_models, self.config.model]
+                    body = {**body, "model": order[0], "models": order}
                 time.sleep(backoff)
                 continue
             if res.status_code == 429:
@@ -234,8 +241,12 @@ CORRECTNESS_RUBRIC = [
 ]
 
 
+# Free judges reason before every answer and one call can take a minute, so a
+# case costs its chain of judge calls. Both metrics run at once, and
+# relevancy's written reason (one more call) is left out: only correctness's
+# reason reaches the report.
 def relevancy_metric(judge: DeepEvalBaseLLM) -> AnswerRelevancyMetric:
-    return AnswerRelevancyMetric(threshold=RELEVANCY_THRESHOLD, model=judge, async_mode=False)
+    return AnswerRelevancyMetric(threshold=RELEVANCY_THRESHOLD, model=judge, include_reason=False, async_mode=True)
 
 
 def correctness_metric(judge: DeepEvalBaseLLM) -> GEval:
@@ -254,8 +265,25 @@ def correctness_metric(judge: DeepEvalBaseLLM) -> GEval:
         evaluation_params=[SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.EXPECTED_OUTPUT],
         model=judge,
         threshold=CORRECTNESS_THRESHOLD,
-        async_mode=False,
+        async_mode=True,
     )
+
+
+def measure(test_case: LLMTestCase, *metrics: BaseMetric) -> None:
+    """Score one case on every metric at once. Each metric keeps its own score and reason."""
+
+    async def all_metrics() -> None:
+        await asyncio.gather(*(m.a_measure(test_case, _show_indicator=False) for m in metrics))
+
+    asyncio.run(all_metrics())
+
+
+def failures(*metrics: BaseMetric) -> list[str]:
+    return [
+        f"{m.__name__} scored {m.score} against threshold {m.threshold} ({m.reason or 'no reason given'})"
+        for m in metrics
+        if not m.is_successful()
+    ]
 
 
 def load_goldens(dataset: Path) -> list[Golden]:

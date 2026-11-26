@@ -16,7 +16,7 @@ import pytest
 from deepeval.test_case import LLMTestCase
 
 from harness.dataset import EVALS_DIR
-from harness.judge import CORRECTNESS_THRESHOLD, JudgeConfig, OpenRouterJudge, correctness_metric
+from harness.judge import CORRECTNESS_THRESHOLD, JudgeConfig, OpenRouterJudge, correctness_metric, measure
 
 pytestmark = [pytest.mark.judge, pytest.mark.agreement]
 
@@ -35,8 +35,9 @@ def judge() -> OpenRouterJudge:
 @pytest.mark.parametrize("row", ROWS, ids=[r["id"] for r in ROWS])
 def test_judge_agrees_with_the_label(judge: OpenRouterJudge, row: dict[str, Any], record_property: Any) -> None:
     metric = correctness_metric(judge)
-    metric.measure(
-        LLMTestCase(input=row["input"], actual_output=row["actual_output"], expected_output=row["expected_output"])
+    measure(
+        LLMTestCase(input=row["input"], actual_output=row["actual_output"], expected_output=row["expected_output"]),
+        metric,
     )
     record_property("score", metric.score)
     passed = metric.score is not None and metric.score >= CORRECTNESS_THRESHOLD

@@ -29,7 +29,7 @@ env:
   GROUNDTRUTH_MODEL: google/gemma-4-31b-it:free
   GROUNDTRUTH_FALLBACK_MODELS: google/gemma-4-26b-a4b-it:free,nvidia/nemotron-3-ultra-550b-a55b:free
   GROUNDTRUTH_JUDGE_MODEL: recursive/flint-v1.0:free
-  GROUNDTRUTH_JUDGE_FALLBACK_MODELS: dots-studio/dots-3-note-preview:free
+  GROUNDTRUTH_JUDGE_FALLBACK_MODELS: particle-ai/particle-1:free,baidu/ernie-5.5-flash-preview:free
   # Never 1 here: every model above must end in ":free" or the app refuses to start a run.
   GROUNDTRUTH_ALLOW_PAID_MODELS: '0'
   GROUNDTRUTH_APP_URL: http://localhost:3000

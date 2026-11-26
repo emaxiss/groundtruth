@@ -11,14 +11,21 @@ from typing import Any
 
 import httpx
 import pytest
-from deepeval import assert_test
 from deepeval.dataset import EvaluationDataset, Golden
 from deepeval.test_case import LLMTestCase
 
 from harness.contract import DISCLAIMER
 from harness.dataset import DATASET
 from harness.http import post_json
-from harness.judge import JudgeConfig, OpenRouterJudge, correctness_metric, load_goldens, relevancy_metric
+from harness.judge import (
+    JudgeConfig,
+    OpenRouterJudge,
+    correctness_metric,
+    failures,
+    load_goldens,
+    measure,
+    relevancy_metric,
+)
 from harness.text import normalize
 
 pytestmark = pytest.mark.judge
@@ -50,7 +57,9 @@ def test_judged(client: httpx.Client, judge: OpenRouterJudge, golden: Golden, re
     )
     relevancy, correctness = relevancy_metric(judge), correctness_metric(judge)
     try:
-        assert_test(test_case=test_case, metrics=[relevancy, correctness], run_async=False)
+        measure(test_case, relevancy, correctness)
+        failed = failures(relevancy, correctness)
+        assert not failed, "; ".join(failed)
     finally:
         # Scores are recorded whether or not the assertion held, so the run
         # report and the calibration script see every case.
