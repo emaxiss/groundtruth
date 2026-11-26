@@ -7,6 +7,7 @@ print what they return, so the arithmetic is testable without an app.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -258,18 +259,26 @@ def format_report(report: dict[str, Any], path: Path) -> list[str]:
     unstable = unstable_cases(report["cases"])
     if unstable:
         lines.append("unstable: " + ", ".join(unstable))
-    served = served_models(report["cases"])
-    if served:
-        lines.append("served by: " + ", ".join(f"{m} ×{n}" for m, n in served.items()))
+    for label, counts in (("served by", served_models(report["cases"])), ("judged by", judged_models(report["cases"]))):
+        if counts:
+            lines.append(f"{label}: " + ", ".join(f"{m} ×{n}" for m, n in counts.items()))
     return lines
 
 
 def served_models(cases: list[dict[str, Any]]) -> dict[str, int]:
     """Which models actually answered, most frequent first. Empty when unknown."""
+    return _counts(c.get("served_model") for c in cases)
+
+
+def judged_models(cases: list[dict[str, Any]]) -> dict[str, int]:
+    """Which judge models graded the run, most frequent first. Empty outside the judge tier."""
+    return _counts((c.get("scores") or {}).get("judge_model") for c in cases)
+
+
+def _counts(models: Iterable[object]) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for c in cases:
-        m = c.get("served_model")
-        if m:
+    for m in models:
+        if isinstance(m, str) and m:
             counts[m] = counts.get(m, 0) + 1
     return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
 

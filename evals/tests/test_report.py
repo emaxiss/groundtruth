@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -280,3 +281,21 @@ def test_a_red_team_run_the_provider_mostly_dropped_fails() -> None:
 
 def test_a_red_team_run_with_no_attacks_fails() -> None:
     assert redteam_gate_failure(promptfoo(0, 0, 0)) == "no attacks ran"
+
+
+# Thresholds are calibrated against one judge; a run graded by its fallback reads differently.
+def test_a_judge_run_names_the_models_that_graded_it() -> None:
+    a, b, c = case("a", "edge", "passed"), case("b", "edge", "passed"), case("c", "edge", "skipped")
+    graded = [
+        replace(a, scores={"judge_model": "j/fallback:free"}),
+        replace(b, scores={"judge_model": "j/primary:free"}),
+        replace(c, served_model="agent:free"),
+    ]
+    lines = format_report(as_dict(report(graded)), Path("x.json"))
+    assert "judged by: j/fallback:free ×1, j/primary:free ×1" in lines
+    assert "served by: agent:free ×1" in lines
+
+
+def test_a_deterministic_run_has_no_judged_by_line() -> None:
+    lines = format_report(as_dict(report([case("a", "edge", "passed")])), Path("x.json"))
+    assert not any(line.startswith("judged by") for line in lines)
