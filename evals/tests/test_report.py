@@ -21,6 +21,7 @@ from harness.report import (
     served_models,
     summarize,
     unstable_cases,
+    with_unrun,
     write_report,
 )
 
@@ -222,6 +223,23 @@ def test_half_the_cases_scored_is_enough() -> None:
 
 def test_a_run_with_no_cases_fails_the_gate() -> None:
     assert gated() == "no cases ran"
+
+
+# A tier stopped by its time limit writes what it has. Without the cases it
+# never reached, a run cut off after seven passes read as a clean pass.
+def test_a_run_stopped_early_fails_the_gate() -> None:
+    selected = [(f"c{i}", "edge", "chat") for i in range(36)]
+    ran = [case(f"c{i}", "edge", "passed") for i in range(7)]
+    cases = with_unrun(ran, selected)
+    assert len(cases) == 36
+    assert cases[-1].outcome == "skipped" and cases[-1].message == "not run: the tier stopped before this case"
+    reason = gate_failure({"totals": summarize(cases)})
+    assert reason == "7 of 36 cases were scored; the rest were rate limited, unavailable, or skipped"
+
+
+def test_a_case_that_ran_is_never_added_again() -> None:
+    ran = [case("a", "edge", "passed"), case("a", "edge", "failed")]
+    assert with_unrun(ran, [("a", "edge", "chat")]) == ran
 
 
 # A judge that could not score a case records it as skipped. The summary line

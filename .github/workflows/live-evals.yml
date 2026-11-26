@@ -100,13 +100,16 @@ jobs:
       # Each tier has its own budget inside the job's 60 minutes. A provider that
       # stops answering costs a case about four minutes of retries, so without
       # these the first tier can use the whole hour and nothing is reported.
+      # A step timeout alone ends the step but not pytest, which kept running
+      # into the next tier; `timeout` interrupts the whole process group a
+      # minute earlier, and the report counts the cases it never reached.
       - name: Deterministic tier
         if: steps.key.outputs.present == 'true'
         id: deterministic
         continue-on-error: true
         timeout-minutes: 20
         shell: bash # pipefail, so the step fails when pytest does and not only when tee does
-        run: pnpm evals:deterministic 2>&1 | tee deterministic.log
+        run: timeout -s INT -k 30s 19m pnpm evals:deterministic 2>&1 | tee deterministic.log
 
       - name: Judge tier
         if: steps.key.outputs.present == 'true' && (github.event_name == 'schedule' || inputs.judge)
@@ -116,7 +119,7 @@ jobs:
         shell: bash
         env:
           GROUNDTRUTH_API_KEY: ${{ secrets.GROUNDTRUTH_API_KEY }}
-        run: pnpm evals:judge 2>&1 | tee judge.log
+        run: timeout -s INT -k 30s 19m pnpm evals:judge 2>&1 | tee judge.log
 
       - name: Adversarial suite
         if: steps.key.outputs.present == 'true'
@@ -124,7 +127,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         shell: bash
-        run: pnpm redteam --no-table 2>&1 | tee redteam.log
+        run: timeout -s INT -k 30s 9m pnpm redteam --no-table 2>&1 | tee redteam.log
 
       - name: Triage adversarial suite
         if: steps.key.outputs.present == 'true'
@@ -132,7 +135,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 5
         shell: bash
-        run: pnpm redteam:triage --no-table 2>&1 | tee redteam-triage.log
+        run: timeout -s INT -k 30s 4m pnpm redteam:triage --no-table 2>&1 | tee redteam-triage.log
 
       - name: Summarise
         if: steps.key.outputs.present == 'true'

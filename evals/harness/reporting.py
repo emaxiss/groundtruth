@@ -21,6 +21,7 @@ from harness.report import (
     format_report,
     load_report,
     previous_report,
+    with_unrun,
     write_report,
 )
 
@@ -41,14 +42,10 @@ def pytest_configure(config: pytest.Config) -> None:
 def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) -> Generator[None, Any, None]:
     outcome = yield
     rep: pytest.TestReport = outcome.get_result()
-    if rep.when != "call" or not hasattr(item, "callspec"):
+    if rep.when != "call":
         return
-    case = item.callspec.params.get("case")
-    golden = item.callspec.params.get("golden")
-    if case is None and golden is not None:
-        meta = getattr(golden, "additional_metadata", None) or {}
-        case = next((c for c in CASES if c.id == meta.get("id")), None)
-    if not isinstance(case, Case):
+    case = _case_of(item)
+    if case is None:
         return
     if call.excinfo is not None and call.excinfo.typename in ("JudgeError", "TimeoutError"):
         # The judge failed to score (or timed out), which says nothing about the agent.
@@ -98,6 +95,17 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     )
 
 
+def _case_of(item: pytest.Item) -> Case | None:
+    if not hasattr(item, "callspec"):
+        return None
+    case = item.callspec.params.get("case")
+    golden = item.callspec.params.get("golden")
+    if case is None and golden is not None:
+        meta = getattr(golden, "additional_metadata", None) or {}
+        case = next((c for c in CASES if c.id == meta.get("id")), None)
+    return case if isinstance(case, Case) else None
+
+
 def _text(value: object) -> str | None:
     return value if isinstance(value, str) else None
 
@@ -115,7 +123,8 @@ def _failure_message(rep: pytest.TestReport) -> str | None:
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     config = session.config
-    results = config.stash.get(RESULTS_KEY, [])
+    selected = [(c.id, c.category, c.endpoint) for c in map(_case_of, session.items) if c is not None]
+    results = with_unrun(config.stash.get(RESULTS_KEY, []), selected)
     if not results:
         return
     health = config.stash.get(HEALTH_KEY, {})

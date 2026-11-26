@@ -99,6 +99,32 @@ def _verdict(scored: int, passes: int) -> str | None:
     return "passed" if passes == scored else "failed"
 
 
+def with_unrun(results: list[CaseResult], selected: list[tuple[str, str, str]]) -> list[CaseResult]:
+    """`results` plus a skipped result for every selected case that never reported.
+
+    `selected` holds (id, category, endpoint) for each case the run was asked to
+    run. A tier stopped by its time limit writes what it has; counting the cases
+    it never reached keeps a run cut short from reading as a clean pass.
+    """
+    seen = {r.id for r in results}
+    missing: dict[str, tuple[str, str]] = {}
+    for id, category, endpoint in selected:
+        if id not in seen:
+            missing.setdefault(id, (category, endpoint))
+    return results + [
+        CaseResult(
+            id=id,
+            category=category,
+            endpoint=endpoint,
+            outcome="skipped",
+            score=None,
+            duration_ms=0,
+            message="not run: the tier stopped before this case",
+        )
+        for id, (category, endpoint) in missing.items()
+    ]
+
+
 def unstable_cases(cases: list[dict[str, Any]]) -> list[str]:
     """Cases that passed some attempts and failed others, as `id passes/attempts`."""
     return [
