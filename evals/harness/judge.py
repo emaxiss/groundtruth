@@ -172,11 +172,7 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
                 # No answer at all is the judge's failure, never the agent's.
                 if backoff is None:
                     raise JudgeError(f"judge request failed after {attempt} retries: {e!r}") from e
-                # OpenRouter moves down the list on an error, never on a model that hangs,
-                # so the retry asks the fallbacks first.
-                if self.config.fallback_models:
-                    order = [*self.config.fallback_models, self.config.model]
-                    body = {**body, "model": order[0], "models": order}
+                body = self._fallbacks_first(body)
                 time.sleep(backoff)
                 continue
             if res.status_code == 429:
@@ -203,9 +199,21 @@ class OpenRouterJudge(DeepEvalBaseLLM):  # type: ignore[misc]  # DeepEval is unt
             self.served_model = payload.get("model") or self.config.model
             content = (choices[0].get("message") or {}).get("content") or ""
             if not content.strip():
-                raise JudgeError("judge returned an empty response")
+                if backoff is None:
+                    raise JudgeError("judge returned an empty response")
+                body = self._fallbacks_first(body)
+                time.sleep(backoff)
+                continue
             return content
         raise JudgeError("judge exhausted retries")
+
+    def _fallbacks_first(self, body: dict[str, Any]) -> dict[str, Any]:
+        # OpenRouter moves down the list only on an error, never on a model that hangs or
+        # answers with nothing, so a retry after either asks the fallbacks first.
+        if not self.config.fallback_models:
+            return body
+        order = [*self.config.fallback_models, self.config.model]
+        return {**body, "model": order[0], "models": order}
 
     def _post(self, body: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
         deadline = time.monotonic() + REQUEST_DEADLINE_S

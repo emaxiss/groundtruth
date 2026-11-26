@@ -332,3 +332,22 @@ def test_after_no_answer_the_retry_asks_the_fallbacks_first(monkeypatch: pytest.
 
     assert judge_with(handler).generate("q") == "graded"
     assert routes == [["j/one:free", "j/one:free", "j/two:free"], ["j/two:free", "j/two:free", "j/one:free"]]
+
+
+def test_an_empty_answer_is_asked_again_of_the_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Live 2026-11-26: Flint answered 200 with empty content and factual-002 went unscored.
+    monkeypatch.setattr("harness.judge.time.sleep", lambda s: None)
+    routes: list[str] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        routes.append(json.loads(req.content)["model"])
+        return ok("" if len(routes) == 1 else "graded")
+
+    assert judge_with(handler).generate("q") == "graded"
+    assert routes == ["j/one:free", "j/two:free"]
+
+
+def test_an_empty_answer_twice_is_a_judge_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("harness.judge.time.sleep", lambda s: None)
+    with pytest.raises(JudgeError, match="empty response"):
+        judge_with(lambda r: ok("  ")).generate("q")
