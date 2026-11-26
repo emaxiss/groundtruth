@@ -3,7 +3,7 @@
 The golden dataset for the TaskLoop support agent and the harness that runs it. The dataset is the contract the harness enforces.
 
 ```
-dataset.jsonl     Thirty-six golden cases, one JSON object per line
+dataset.jsonl     Thirty-nine golden cases, one JSON object per line
 harness/          The harness as a package
   dataset.py      Case dataclass and loader
   http.py         POST helper: throttles and provider outages become outcomes, not failures
@@ -23,7 +23,7 @@ conftest.py       Telemetry opt-out, app client fixture, case parametrisation
 
 ## Dataset
 
-`dataset.jsonl` holds 36 cases, one JSON object per line, six per category:
+`dataset.jsonl` holds 39 cases, one JSON object per line, at least six per category:
 
 | Category       | What it catches                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------ |
