@@ -29,6 +29,7 @@ class CaseResult:
     scores: dict[str, Any] | None = None  # judge tier: relevancy, correctness, judge_model
     attempts: int = 1  # how many times the case ran (GROUNDTRUTH_EVAL_REPEATS)
     passes: int | None = None  # scored attempts that passed; None on a single-attempt run
+    scored: int | None = None  # attempts that were scored, not throttled or unavailable; None as above
 
 
 @dataclass
@@ -88,6 +89,7 @@ def collapse_attempts(results: list[CaseResult]) -> list[CaseResult]:
                 scores=(first_failure or attempts[-1]).scores,
                 attempts=len(attempts),
                 passes=passes if scored else None,
+                scored=len(scored) if scored else None,
             )
         )
     return collapsed
@@ -127,12 +129,17 @@ def with_unrun(results: list[CaseResult], selected: list[tuple[str, str, str]]) 
 
 
 def unstable_cases(cases: list[dict[str, Any]]) -> list[str]:
-    """Cases that passed some attempts and failed others, as `id passes/attempts`."""
-    return [
-        f"{c['id']} {c['passes']}/{c['attempts']}"
-        for c in cases
-        if c.get("passes") is not None and 0 < c["passes"] < c.get("attempts", 1)
-    ]
+    """Cases that passed some scored attempts and failed others, as `id passes/scored`.
+
+    Throttled and unavailable attempts are not counted; reports written before
+    `scored` existed fall back to `attempts`.
+    """
+    unstable = []
+    for c in cases:
+        scored = c.get("scored") or c.get("attempts", 1)
+        if c.get("passes") is not None and 0 < c["passes"] < scored:
+            unstable.append(f"{c['id']} {c['passes']}/{scored}")
+    return unstable
 
 
 def summarize(cases: list[CaseResult]) -> dict[str, Any]:
