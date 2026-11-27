@@ -15,7 +15,7 @@ harness/          The harness as a package
 suites/           test_deterministic.py (CI gate), test_judge.py, test_judge_agreement.py
 tests/            Unit tests for the harness itself, no app needed
 judge_agreement.jsonl  Sixteen answers of known quality, for measuring the judge itself
-tools/            validate_dataset.py, judge_spread.py
+tools/            validate_dataset.py, judge_spread.py, check_models.py
 examples/         Baseline and regression run pair used in the top-level README
 results/          Run reports, gitignored
 conftest.py       Telemetry opt-out, app client fixture, case parametrisation
@@ -208,3 +208,11 @@ pnpm evals:validate
 Checks the count, unique ids, six-per-category balance, id prefixes, input limits, enum values against the triage contract, that every regex compiles, and that exactly one chat case sits at the 2000-character limit. Standard library only; runs in CI as a gate alongside the app build.
 
 `tests/test_observed_answers.py` checks the patterns themselves: answers observed from live models must pass their case, and answers that are wrong in the way a case exists to catch (a hedged verdict, a stray number, a bare "OK.") must fail it. `tests/test_decline_pattern.py` does the same for the shared out-of-scope decline.
+
+## Model check
+
+```bash
+pnpm evals:models
+```
+
+Free models are retired without notice. This checks every configured model (the agent and judge routes, from the same variables the app reads) against the provider's public model list. A route with none of its models offered is an error and stops the live run before it starts; a missing model with another one still offered on its route is a warning. The live workflow runs it first.
