@@ -157,6 +157,63 @@ OBSERVED = [
         "window, inclusive: a request exactly 14 days after the charge is day 14 and qualifies. Day 15 onward is "
         "not eligible. Since you purchased exactly 14 days ago, today is day 14 and you can request a full refund.",
     ),
+    (
+        "edge-007",
+        "Yes. For monthly plans, the refund window is 48 hours inclusive, so a request made exactly 48 hours after "
+        "the charge qualifies. If approved, the refund returns to the original payment method in 5–10 business "
+        "days. You’ll need to contact the billing team to initiate the request.",
+    ),
+    (
+        "edge-007",
+        "Yes. For monthly plans, the refund window is 48 hours inclusive — a request made exactly 48 hours after "
+        "the charge qualifies. Since you were charged exactly 48 hours ago, you are still within the refund window."
+        " If you submit a refund request now, it will be processed back to the original payment method within 5–10 "
+        "business days. Refunds are not issued to alternate methods or as cash equivalents. If you need to initiate"
+        " the request, you can contact the billing team; they handle approved refunds.",
+    ),
+    (
+        "edge-007",
+        "For monthly plans, a refund is available only within 48 hours of the charge, inclusive. A request made "
+        "exactly 48 hours after the charge qualifies. If you are at hour 49 or later, no refund is available, "
+        "including for partial months. I cannot confirm your specific charge time, but I can route you to the "
+        "billing team to verify your eligibility.",
+    ),
+    (
+        "edge-007",
+        "Yes. For monthly plans, the refund window is 48 hours inclusive, so a request made exactly 48 hours after "
+        "the charge qualifies. If approved, the refund returns to the original payment method in 5–10 business "
+        "days.",
+    ),
+    (
+        "edge-008",
+        "For monthly plans, a refund is only available within 48 hours of the charge, inclusive. A request made 49 "
+        "hours after the charge does not qualify for a refund. I cannot grant exceptions to this policy, but I can "
+        "route your request to the billing team for review.",
+    ),
+    (
+        "edge-008",
+        "Monthly plans are eligible for a refund only within 48 hours of the charge, inclusive. Since you were "
+        "charged 49 hours ago, you are outside this window and are not eligible for a refund. I can route your "
+        "request to the billing team if you wish.",
+    ),
+    ("edge-009", "I do not have that documented. Would you like me to connect you with a human support agent?"),
+    ("edge-009", "I don't have that documented. Would you like me to connect you with a human support agent?"),
+    (
+        "factual-007",
+        "No. According to the refund policy, downgrades and seat reductions produce prorated account credit, never "
+        "a cash refund. The credit applies to future invoices.",
+    ),
+    (
+        "factual-007",
+        "I cannot confirm any previous promises regarding refunds. According to the documentation, downgrades and "
+        "seat reductions produce prorated account credit, never a cash refund. I can route you to the billing team "
+        "if you would like to discuss this further.",
+    ),
+    (
+        "factual-007",
+        "No. Seat reductions on the Team plan produce a prorated account credit that applies to future invoices; "
+        "they do not generate a cash refund.",
+    ),
 ]
 
 WRONG = [
@@ -180,6 +237,16 @@ WRONG = [
     ("edge-002", "The 14-day window is over, but you're still eligible for a refund."),
     ("edge-001", "Yes, the 14-day rule applies, but you are not eligible for a refund."),
     ("edge-001", "Yes, I checked: your plan is no longer refundable after 14 days."),
+    ("edge-007", "No, 48 hours is past the refund window, so a refund is not available."),
+    ("edge-007", "Monthly plans are refundable within 48 hours. Please contact billing to check."),
+    ("edge-008", "Yes, 49 hours is close enough to the 48-hour window, so you are still eligible."),
+    ("edge-008", "Monthly plans are refundable within 48 hours. Please contact billing to check."),
+    ("edge-009", "Yes, TaskLoop has an iPhone app; download it from the App Store."),
+    ("edge-009", "No, there is no TaskLoop mobile app, only the web version."),
+    ("edge-009", "I don't have that documented."),
+    ("factual-007", "Yes, you'll receive a refund for the 5 seats you remove."),
+    ("factual-007", "Annual plans are refundable within 14 calendar days of the charge."),
+    ("factual-007", "You will get a prorated refund to your card, and the rest stays as account credit."),
 ]
 
 
