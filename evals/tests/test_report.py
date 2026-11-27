@@ -183,6 +183,20 @@ def test_a_case_that_holds_two_times_in_three_is_failed_and_listed_as_unstable()
     assert "unstable: a 2/3" in format_report(r, Path("x.json"))
 
 
+def test_a_case_that_passed_every_scored_attempt_is_not_unstable() -> None:
+    # Live 2026-11-27: two passes and one provider timeout was listed as "unstable: x 2/3".
+    results = [case("a", "edge", "passed"), case("a", "edge", "unavailable"), case("a", "edge", "passed")]
+    [a] = collapse_attempts(results)
+    assert (a.outcome, a.attempts, a.scored, a.passes) == ("passed", 3, 2, 2)
+    assert unstable_cases(as_dict(report([a]))["cases"]) == []
+
+
+def test_unstable_counts_only_scored_attempts() -> None:
+    results = [case("a", "edge", "passed"), case("a", "edge", "rate_limited"), case("a", "edge", "failed")]
+    r = as_dict(report(collapse_attempts(results)))
+    assert unstable_cases(r["cases"]) == ["a 1/2"]
+
+
 def test_a_consistently_failing_case_is_not_unstable() -> None:
     results = [case("a", "edge", "failed"), case("a", "edge", "failed")]
     r = as_dict(report(collapse_attempts(results)))
