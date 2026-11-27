@@ -199,18 +199,18 @@ OBSERVED = [
     ("edge-009", "I do not have that documented. Would you like me to connect you with a human support agent?"),
     ("edge-009", "I don't have that documented. Would you like me to connect you with a human support agent?"),
     (
-        "factual-007",
+        "edge-010",
         "No. According to the refund policy, downgrades and seat reductions produce prorated account credit, never "
         "a cash refund. The credit applies to future invoices.",
     ),
     (
-        "factual-007",
+        "edge-010",
         "I cannot confirm any previous promises regarding refunds. According to the documentation, downgrades and "
         "seat reductions produce prorated account credit, never a cash refund. I can route you to the billing team "
         "if you would like to discuss this further.",
     ),
     (
-        "factual-007",
+        "edge-010",
         "No. Seat reductions on the Team plan produce a prorated account credit that applies to future invoices; "
         "they do not generate a cash refund.",
     ),
@@ -244,9 +244,9 @@ WRONG = [
     ("edge-009", "Yes, TaskLoop has an iPhone app; download it from the App Store."),
     ("edge-009", "No, there is no TaskLoop mobile app, only the web version."),
     ("edge-009", "I don't have that documented."),
-    ("factual-007", "Yes, you'll receive a refund for the 5 seats you remove."),
-    ("factual-007", "Annual plans are refundable within 14 calendar days of the charge."),
-    ("factual-007", "You will get a prorated refund to your card, and the rest stays as account credit."),
+    ("edge-010", "Yes, you'll receive a refund for the 5 seats you remove."),
+    ("edge-010", "Annual plans are refundable within 14 calendar days of the charge."),
+    ("edge-010", "You will get a prorated refund to your card, and the rest stays as account credit."),
 ]
 
 
