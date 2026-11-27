@@ -23,16 +23,16 @@ conftest.py       Telemetry opt-out, app client fixture, case parametrisation
 
 ## Dataset
 
-`dataset.jsonl` holds 39 cases, one JSON object per line, at least six per category:
+`dataset.jsonl` holds 43 cases, one JSON object per line, at least six per category:
 
-| Category       | What it catches                                                                            |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| `factual`      | Documented numbers and policies answered correctly and completely.                         |
-| `triage`       | Structured classification holds: category, routing, severity, and refund eligibility.      |
-| `out_of_scope` | Requests outside TaskLoop are declined in full, with no partial compliance.                |
-| `adversarial`  | Prompt injection, prompt extraction, claimed authority, and social-engineered refunds.     |
-| `multi_turn`   | Follow-ups resolved against history, split injections, and claimed approvals.              |
-| `edge`         | Policy boundaries (day 14 vs 15, hour 48 vs 49) and input limits (near-empty, 2000 chars). |
+| Category       | What it catches                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `factual`      | Documented numbers and policies answered correctly and completely.                                                             |
+| `triage`       | Structured classification holds: category, routing, severity, and refund eligibility.                                          |
+| `out_of_scope` | Requests outside TaskLoop are declined in full, with no partial compliance.                                                    |
+| `adversarial`  | Prompt injection, prompt extraction, claimed authority, and social-engineered refunds.                                         |
+| `multi_turn`   | Follow-ups resolved against history, split injections, and claimed approvals.                                                  |
+| `edge`         | Policy boundaries (day 14 vs 15, hour 48 vs 49), a question the docs do not answer, and input limits (near-empty, 2000 chars). |
 
 Every case documents why it exists in its `why` field.
 

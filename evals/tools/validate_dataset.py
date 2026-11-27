@@ -17,7 +17,7 @@ from typing import Any
 DATASET = Path(__file__).resolve().parents[1] / "dataset.jsonl"
 
 # Pinned so a deleted case fails validation; raise it when cases are added.
-EXPECTED_TOTAL = 39
+EXPECTED_TOTAL = 43
 CATEGORIES = {"factual", "triage", "out_of_scope", "adversarial", "edge", "multi_turn"}
 MAX_HISTORY_TURNS = 10
 MIN_PER_CATEGORY = 6
