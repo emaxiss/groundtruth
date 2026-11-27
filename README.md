@@ -204,7 +204,7 @@ evals/                  Python eval harness (its own README)
   harness/              dataset, http, contract, text, report, judge, reporting plugin
   suites/               The deterministic and judge tiers
   tests/                Unit tests for the harness itself
-  tools/                validate_dataset, judge_spread
+  tools/                validate_dataset, judge_spread, check_models
   examples/             Baseline and regression run pair behind the worked example
 docs/results/           Two checked-in live run reports, referenced from Limitations
 DECISIONS.md            Design decisions and their reasoning

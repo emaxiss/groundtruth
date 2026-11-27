@@ -76,6 +76,12 @@ jobs:
           cache: pip
           cache-dependency-path: evals/requirements.txt
 
+      # Free models get retired without notice. A route with none of its models
+      # left would spend the hour on retries; this stops the run in seconds.
+      - name: Check the models are still offered
+        if: steps.key.outputs.present == 'true'
+        run: pnpm evals:models
+
       - name: Install and build
         if: steps.key.outputs.present == 'true'
         run: |
