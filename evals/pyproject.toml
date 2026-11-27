@@ -2,6 +2,8 @@
 testpaths = ["suites", "tests"]
 pythonpath = ["."]
 addopts = "-ra --strict-markers"
+# pytest-asyncio arrives with DeepEval; set the scope it will default to, so runs stay quiet.
+asyncio_default_fixture_loop_scope = "function"
 markers = [
   "judge: scored by an LLM judge; noisier and needs a model, excluded from the CI gate with -m 'not judge'",
   "agreement: scores answers of known quality to measure the judge itself; needs a judge model, no app",
